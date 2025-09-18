@@ -1,0 +1,122 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Basic prose styles for content rendering - helps format raw HTML content */
+.prose {
+  line-height: 1.75;
+  color: #374151; /* slate-700 */
+}
+
+.prose h1,
+.prose h2,
+.prose h3,
+.prose h4,
+.prose h5,
+.prose h6 {
+  color: #111827; /* slate-900 */
+  font-weight: 700;
+  margin-top: 1.5em;
+  margin-bottom: 0.75em;
+}
+
+.prose h1 {
+  font-size: 2.25em; /* 36px */
+}
+
+.prose h2 {
+  font-size: 1.875em; /* 30px */
+}
+
+.prose h3 {
+  font-size: 1.5em; /* 24px */
+}
+
+.prose p {
+  margin-top: 1em;
+  margin-bottom: 1em;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding-left: 1.5em;
+}
+
+.prose ul li {
+  list-style-type: disc;
+}
+
+.prose ol li {
+  list-style-type: decimal;
+}
+
+.prose a {
+  color: #2563eb; /* blue-600 */
+  text-decoration: underline;
+}
+
+.prose strong {
+  font-weight: 700;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+}
+
+.prose blockquote {
+  border-left: 4px solid #d1d5db; /* slate-300 */
+  padding-left: 1em;
+  color: #6b7280; /* slate-500 */
+  font-style: italic;
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+
+.prose pre {
+  background-color: #f3f4f6; /* slate-100 */
+  padding: 1em;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+}
+
+.prose code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier,
+    monospace;
+  font-size: 0.875em;
+  background-color: #e5e7eb; /* slate-200 */
+  padding: 0.2em 0.4em;
+  border-radius: 0.25rem;
+}
+
+.prose pre code {
+  background-color: transparent;
+  padding: 0;
+  border-radius: 0;
+}
+
+.prose table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5em;
+  margin-bottom: 1.5em;
+}
+
+.prose th,
+.prose td {
+  border: 1px solid #e5e7eb; /* slate-200 */
+  padding: 0.75em;
+  text-align: left;
+}
+
+.prose th {
+  background-color: #f9fafb; /* slate-50 */
+  font-weight: 600;
+}

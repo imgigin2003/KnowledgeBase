@@ -1,0 +1,81 @@
+{
+  "name": "Article",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "description": "Article title"
+    },
+    "content": {
+      "type": "string",
+      "description": "Article content in HTML format"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Brief summary or excerpt"
+    },
+    "author": {
+      "type": "string",
+      "description": "Article author name (for display purposes)"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "documentation",
+        "research",
+        "tutorials",
+        "references",
+        "projects",
+        "processes"
+      ],
+      "default": "documentation",
+      "description": "Article category"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Article tags for organization"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "Parent article ID for hierarchy"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "published", "archived"],
+      "default": "draft",
+      "description": "Article status"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "default": "medium",
+      "description": "Article priority"
+    },
+    "attachments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "filename": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "Attached files and images"
+    },
+    "folder_structure": {
+      "type": "object",
+      "description": "Uploaded folder structure with files"
+    }
+  },
+  "required": ["title", "content"]
+}

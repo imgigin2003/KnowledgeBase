@@ -1,3 +1,23 @@
 {
-  "articles": []
+  "articles": [
+    {
+      "id": "1758809320411",
+      "title": "Getting Started with Our Knowledge Base",
+      "content": "Welcome to the Knowledge Base\nThis internal knowledge management system is designed to help our team document, organize, and share important information about our projects, processes, and research findings.\n\nKey Features\nRich text editing with support for images and files\nHierarchical organization through categories\nTag-based classification for easy searching\nDraft and published status management\nFile attachment support\nStart creating your first article to contribute to our collective knowledge!",
+      "summary": "An introduction to using our internal knowledge management system effectively.",
+      "author": "negin",
+      "category": "documentation",
+      "status": "published",
+      "priority": "high",
+      "tags": [
+        "getting-started",
+        "documentation",
+        "guide"
+      ],
+      "attachments": [],
+      "folder_structure": {},
+      "created_by": "",
+      "createdAt": "2025-09-25T14:08:40.411Z"
+    }
+  ]
 }

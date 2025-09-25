@@ -150,7 +150,7 @@ Start Backend (in backend/):
 - Easy deployment on any machine with Docker.
 
 - Build & Run:
-  `docker-compose up --build`
+  `docker compose up --build`
 
 - Output: Builds frontend/backend, starts on port 3001.
 

@@ -30,9 +30,9 @@
 ### 🛣️ Step 1: Clone and Prepare the Project
 
 - Grab the repo and navigate to it.
-- bashgit clone https://github.com/imgigin2003/knowledgeBase.git
+- git clone https://github.com/imgigin2003/knowledgeBase.git
 - cd KnowledgeWeave
-- Verify: Run tree -I node_modules (or dir /s on Windows)—you should see this structure:
+- Verify: Run `tree -I node_modules` (or `dir /s on Windows`)—you should see this structure:
 
 ```
 ├── Dockerfile

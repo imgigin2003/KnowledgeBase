@@ -75,6 +75,16 @@
     "folder_structure": {
       "type": "object",
       "description": "Uploaded folder structure with files"
+    },
+    "createdAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the article was created"
+    },
+    "updatedAt": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the article was last updated"
     }
   },
   "required": ["title", "content"]

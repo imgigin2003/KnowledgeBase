@@ -21,6 +21,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   GraduationCap,
   Plus,
   User,
@@ -31,6 +42,8 @@ import {
   FileText,
   Briefcase,
   Target,
+  Edit3,
+  Trash2,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -80,6 +93,7 @@ export default function InternTracking() {
     description: "",
     type: "course",
   });
+  const [isDeleting, setIsDeleting] = useState(null); // state برای مدیریت حذف
 
   const loadInterns = async () => {
     try {
@@ -137,6 +151,16 @@ export default function InternTracking() {
       await loadInterns();
     } catch (error) {
       console.error("Error saving intern:", error);
+    }
+  };
+
+  const handleDeleteIntern = async (id) => {
+    try {
+      await Intern.delete(id);
+      setInterns((prev) => prev.filter((intern) => intern.id !== id));
+      setIsDeleting(null); // بستن dialog بعد حذف
+    } catch (error) {
+      console.error("Error deleting intern:", error);
     }
   };
 
@@ -249,7 +273,6 @@ export default function InternTracking() {
                                 : i
                             );
                             setInterns(updatedInterns);
-                            // Save to backend (optional real-time)
                             Intern.update(intern.id, {
                               ...intern,
                               requirements: intern.requirements.map((r) =>
@@ -280,6 +303,50 @@ export default function InternTracking() {
                     <span className="text-sm text-slate-600">Notes</span>
                   </div>
                   <p className="text-slate-900">{intern.notes || "N/A"}</p>
+                </div>
+                <div className="col-span-2 flex justify-end gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingIntern(intern);
+                      setNewIntern({ ...intern });
+                      setShowAddDialog(true);
+                    }}
+                    className="bg-blue-100 text-blue-800 hover:bg-blue-200"
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Edit
+                  </Button>
+                  <AlertDialog open={isDeleting === intern.id}>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="destructive"
+                        className="bg-red-100 text-red-800 hover:bg-red-200"
+                        onClick={() => setIsDeleting(intern.id)}
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete {intern.name}? This
+                          action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteIntern(intern.id)}
+                          className="bg-red-600 text-white hover:bg-red-700"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </CardContent>
             </Card>

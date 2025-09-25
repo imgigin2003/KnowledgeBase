@@ -1,0 +1,73 @@
+{
+  "name": "Intern",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Intern's full name"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "description": "Intern's email address"
+    },
+    "start_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Internship start date"
+    },
+    "program": {
+      "type": "string",
+      "description": "Internship program or track"
+    },
+    "requirements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["course", "exercise", "project", "assessment"],
+            "default": "course"
+          },
+          "completed": {
+            "type": "boolean",
+            "default": false
+          },
+          "completion_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "description": "List of requirements and their completion status"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "completed", "on_hold", "terminated"],
+      "default": "active",
+      "description": "Current internship status"
+    },
+    "mentor": {
+      "type": "string",
+      "description": "Assigned mentor name"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes about the intern"
+    }
+  },
+  "required": ["name", "email"]
+}

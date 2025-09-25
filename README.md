@@ -1,6 +1,6 @@
 # 🚀 Knowledge Weave - Complete Installation and Setup Guide
 
-### Welcome! 👋 to Knowledge Weave, a self-hosted knowledge management system built with React (frontend) and Node.js (backend). This project is fully independent of Supabase—data (articles and interns) is stored locally in JSON files for easy persistence. This README covers everything from zero to hero (0 to 100): prerequisites, installation, version checks, running the app, and troubleshooting. If you hit issues, check GitHub issues or drop a comment. Let's get started! 😊
+- Welcome! 👋 to Knowledge Weave, a self-hosted knowledge management system built with React (frontend) and Node.js (backend). This project is fully independent of Supabase—data (articles and interns) is stored locally in JSON files for easy persistence. This README covers everything from zero to hero (0 to 100): prerequisites, installation, version checks, running the app, and troubleshooting. If you hit issues, check GitHub issues or drop a comment. Let's get started! 😊
 
 ## 📋 Prerequisites
 
@@ -25,7 +25,7 @@
 
 4. VS Code (recommended) 📝: For editing, with extensions like "Tailwind CSS IntelliSense" and "ES7+ React Snippets".
 
-## Pro Tip: Works on Windows/macOS/Linux. For macOS M1/M2, install ARM64 Node.
+- Pro Tip: Works on Windows/macOS/Linux. For macOS M1/M2, install ARM64 Node.
 
 ### 🛣️ Step 1: Clone and Prepare the Project
 
@@ -92,14 +92,15 @@
 
 - Import Existing Data (if you have backups): Copy arrays from your backup JSONs into the files (ensure IDs are strings).
 - Check vite.config.js (root): Ensure proxy for API:
-  `jsserver: {
+  ```jsserver: {
   proxy: {
     "/api": {
       target: "http://localhost:3001",
       changeOrigin: true,
     },
   },
-}`
+  }
+  ```
 
 * Verify: Open JSONs in VS Code—no syntax errors. Configs saved?
 
@@ -127,7 +128,7 @@ Start Backend (in backend/):
 - Add Intern: + Add Intern → Form → Submit → Refresh → Intern shows.
 - Console Check (F12 > Console/Network): No CORS/fetch errors. API calls (e.g., /api/articles) return 200 OK.
 
-## Pro Tip: Data saves to backend/\*.json—edit manually for testing!
+* Pro Tip: Data saves to backend/\*.json—edit manually for testing!
 
 ### 🔨 Step 5: Build and Run in Production Mode (Optional)
 

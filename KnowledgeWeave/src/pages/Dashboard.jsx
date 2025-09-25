@@ -173,9 +173,11 @@ export default function Dashboard() {
                           )}
                           <div className="flex items-center gap-3 text-xs text-slate-500">
                             <span>
-                              {article.updated_date
+                              {article.updatedAt || article.createdAt
                                 ? format(
-                                    new Date(article.updated_date),
+                                    new Date(
+                                      article.updatedAt || article.createdAt
+                                    ),
                                     "MMM d, yyyy"
                                   )
                                 : "No date"}

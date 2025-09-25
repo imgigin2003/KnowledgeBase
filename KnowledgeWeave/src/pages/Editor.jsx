@@ -309,20 +309,22 @@ export default function Editor() {
                 </Select>
               </div>
               <div>
-                <Label>Priority</Label>
+                <Label className="text-sm font-medium text-slate-700">
+                  Priority
+                </Label>
                 <Select
                   value={article.priority}
                   onValueChange={(value) =>
                     setArticle((prev) => ({ ...prev, priority: value }))
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="mt-1 border-slate-300">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRIORITY_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
+                    {PRIORITY_OPTIONS.map((priority) => (
+                      <SelectItem key={priority.value} value={priority.value}>
+                        {priority.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

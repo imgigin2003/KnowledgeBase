@@ -18,6 +18,7 @@ import {
   FolderOpen,
   ChevronDown,
   ChevronRight,
+  Tag,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -31,6 +32,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
+const safeFormatDate = (dateStr) => {
+  if (!dateStr) return "No date";
+  const d = new Date(dateStr);
+  return isNaN(d) ? "Invalid date" : format(d, "MMMM d, yyyy");
+};
 
 export default function ArticlePage() {
   const navigate = useNavigate();
@@ -64,18 +70,6 @@ export default function ArticlePage() {
     }
   }, [articleId, navigate]);
 
-  const safeFormatDate = (dateString, formatStr) => {
-    if (!dateString) return "Unknown Date"; // fallback اگر null
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) return "Invalid Date"; // چک valid
-      return format(date, formatStr);
-    } catch (error) {
-      console.error("Date format error:", error, dateString); // log
-      return "Invalid Date";
-    }
-  };
-
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
@@ -108,6 +102,12 @@ export default function ArticlePage() {
     references: "bg-orange-100 text-orange-800 border-orange-200",
     projects: "bg-red-100 text-red-800 border-red-200",
     processes: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  };
+
+  const priorityColors = {
+    low: "bg-slate-100 text-slate-600",
+    medium: "bg-yellow-100 text-yellow-700",
+    high: "bg-red-100 text-red-700",
   };
 
   if (isLoading) {
@@ -197,7 +197,11 @@ export default function ArticlePage() {
           </Link>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="destructive" disabled={isDeleting}>
+              <Button
+                variant="destructive"
+                disabled={isDeleting}
+                className="bg-red-100 text-red-800 hover:bg-red-200"
+              >
                 <Trash2 className="w-4 h-4 mr-2" />
                 Delete
               </Button>
@@ -214,7 +218,11 @@ export default function ArticlePage() {
                 <AlertDialogCancel disabled={isDeleting}>
                   Cancel
                 </AlertDialogCancel>
-                <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  className="bg-red-600 text-white hover:bg-red-700"
+                >
                   {isDeleting ? "Deleting..." : "Delete"}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -225,58 +233,90 @@ export default function ArticlePage() {
 
       {/* Title and Metadata */}
       <div className="space-y-4">
-        <h1 className="text-3xl font-bold text-slate-900">{article.title}</h1>
-        <div className="flex items-center gap-4 text-sm text-slate-600">
-          <div className="flex items-center gap-1">
-            <User className="w-4 h-4" />
-            <span>{article.author || "Unknown"}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            <span>{safeFormatDate(article.createdAt, "MMM dd, yyyy")}</span>
-          </div>
-          <Badge
-            className={
-              categoryColors[article.category] || "bg-gray-100 text-gray-800"
-            }
-          >
-            {article.category}
-          </Badge>
-          {article.tags &&
-            article.tags.map((tag, index) => (
-              <Badge
-                key={index}
-                variant="secondary"
-                className="bg-slate-100 text-slate-700"
-              >
-                {tag}
+        <article className="bg-white rounded-xl shadow-sm border border-slate-200">
+          <div className="p-8 border-b border-slate-100">
+            <div className="flex flex-wrap gap-2 mb-4">
+              <Badge className={`${categoryColors[article.category]} border`}>
+                {article.category}
               </Badge>
-            ))}
-          <Badge
-            variant={article.status === "published" ? "default" : "secondary"}
-          >
-            {article.status}
-          </Badge>
-        </div>
-        {article.summary && (
-          <p className="text-slate-600 italic">{article.summary}</p>
-        )}
-      </div>
+              <Badge
+                variant={
+                  article.status === "published" ? "default" : "secondary"
+                }
+                className="capitalize"
+              >
+                {article.status}
+              </Badge>
+              <Badge className={`${priorityColors[article.priority]} border-0`}>
+                {article.priority} priority
+              </Badge>
+            </div>
 
-      {/* Content */}
-      <Card>
-        <CardContent className="p-6">
-          <div className="prose max-w-none">
-            <div
-              dangerouslySetInnerHTML={{
-                __html: article.content
-                  ? `<p>${article.content.replace(/\n/g, "</p><p>")}</p>`
-                  : "",
-              }}
-            />
+            <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4 leading-tight">
+              {article.title}
+            </h1>
+
+            {article.summary && (
+              <p className="text-lg text-slate-600 mb-6 leading-relaxed">
+                {article.summary}
+              </p>
+            )}
+
+            <div className="flex flex-wrap items-center gap-6 text-sm text-slate-500">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                <span>Created: {safeFormatDate(article.createdAt)}</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span>{article.author || "Unknown"}</span>
+              </div>
+
+              {article.updatedAt && article.updatedAt !== article.createdAt && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  <span>Updated {safeFormatDate(article.updatedAt)}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Content */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="p-8">
+                  <div
+                    className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900"
+                    dangerouslySetInnerHTML={{ __html: article.content }}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+            <br></br>
+            {article.tags && article.tags.length > 0 && (
+              <div className="p-8 pt-0">
+                <div className="flex items-center gap-2 mb-3">
+                  <Tag className="w-4 h-4 text-slate-500" />
+                  <span className="text-sm font-medium text-slate-700">
+                    Tags
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {article.tags.map((tag, index) => (
+                    <Badge
+                      key={index}
+                      variant="outline"
+                      className="bg-slate-50 text-slate-600 border-slate-300"
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </article>
+      </div>
 
       {/* Attachments */}
       {article.attachments && article.attachments.length > 0 && (

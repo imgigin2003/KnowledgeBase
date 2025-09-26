@@ -40,7 +40,7 @@ const safeFormatDate = (dateStr) => {
 
 export default function ArticlePage() {
   const navigate = useNavigate();
-  const [article, setArticle] = useState(null);
+  const [article, setArticles] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState(new Set());
@@ -53,7 +53,7 @@ export default function ArticlePage() {
       try {
         const foundArticle = await Article.get(id); // بهینه‌سازی: مستقیم get
         if (foundArticle) {
-          setArticle(foundArticle);
+          setArticles(foundArticle);
         } else {
           navigate(createPageUrl("Dashboard"));
         }
@@ -232,8 +232,8 @@ export default function ArticlePage() {
       </div>
 
       {/* Title and Metadata */}
-      <div className="space-y-4">
-        <article className="bg-white rounded-xl shadow-sm border border-slate-200">
+      <article className="bg-white rounded-xl shadow-sm border border-slate-200">
+        <div className="space-y-4">
           <div className="p-8 border-b border-slate-100">
             <div className="flex flex-wrap gap-2 mb-4">
               <Badge className={`${categoryColors[article.category]} border`}>
@@ -284,14 +284,13 @@ export default function ArticlePage() {
             {/* Content */}
             <Card>
               <CardContent className="p-6">
-                <div className="p-8">
-                  <div
-                    className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900"
-                    dangerouslySetInnerHTML={{ __html: article.content }}
-                  />
-                </div>
+                <div
+                  className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900"
+                  dangerouslySetInnerHTML={{ __html: article.content }}
+                />
               </CardContent>
             </Card>
+
             <br></br>
             {article.tags && article.tags.length > 0 && (
               <div className="p-8 pt-0">
@@ -315,8 +314,8 @@ export default function ArticlePage() {
               </div>
             )}
           </div>
-        </article>
-      </div>
+        </div>
+      </article>
 
       {/* Attachments */}
       {article.attachments && article.attachments.length > 0 && (

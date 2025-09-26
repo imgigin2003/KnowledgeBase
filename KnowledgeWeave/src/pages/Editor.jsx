@@ -58,7 +58,7 @@ export default function Editor() {
   const [currentuser, setCurrentuser] = useState(null);
   const [allArticles, setAllArticles] = useState([]);
   const [existingTags, setExistingTags] = useState([]);
-  const [article, setArticle] = useState({
+  const [article, setArticles] = useState({
     title: "",
     content: "",
     summary: "",
@@ -80,19 +80,27 @@ export default function Editor() {
     const loadData = async () => {
       try {
         // Load current user
-        const user = await user.me();
-        setCurrentuser(user);
-        setArticle((prev) => ({
+        const me = await user.me();
+        setCurrentuser(me);
+        setArticles((prev) => ({
           ...prev,
-          author: user?.full_name || user?.email || "",
-          created_by: user?.id || "",
+          author: me?.full_name || me?.email || "",
+          created_by: me?.id || "",
         }));
 
-        // Load all articles to get existing tags
-        const articles = await Article.list();
-        setAllArticles(articles);
-        const tags = articles.flatMap((a) => a.tags || []).filter(Boolean);
-        setExistingTags([...new Set(tags)]);
+        // Load all articles just for existing tags
+        const all = await Article.list();
+        setAllArticles(all);
+        const tags = [...new Set(all.flatMap((a) => a.tags || []))];
+        setExistingTags(tags);
+
+        // If editing, fetch just that article
+        if (editId) {
+          const foundArticle = await Article.get(editId);
+          if (foundArticle) {
+            setArticles(foundArticle);
+          }
+        }
       } catch (error) {
         console.error("Error loading data:", error);
         setCurrentuser(null);
@@ -100,31 +108,20 @@ export default function Editor() {
     };
 
     loadData();
-
-    // Load existing article for edit
-    if (editId) {
-      const loadArticles = async () => {
-        try {
-          const articles = await Article.list();
-          setArticles(articles || []);
-        } catch (error) {
-          console.error("Error loading articles:", error);
-        }
-      };
-
-      loadArticles();
-    }
   }, [editId, navigate]);
 
-  const addTag = (tag = newTag.trim()) => {
-    if (tag && !article.tags.includes(tag)) {
-      setArticle((prev) => ({ ...prev, tags: [...prev.tags, tag] }));
+  const addTag = (tagToAdd = newTag.trim()) => {
+    if (tagToAdd && !article.tags.includes(tagToAdd)) {
+      setArticles((prev) => ({
+        ...prev,
+        tags: [...prev.tags, tagToAdd],
+      }));
       setNewTag("");
     }
   };
 
   const removeTag = (tagToRemove) => {
-    setArticle((prev) => ({
+    setArticles((prev) => ({
       ...prev,
       tags: prev.tags.filter((t) => t !== tagToRemove),
     }));
@@ -137,7 +134,7 @@ export default function Editor() {
     setIsUploading(true);
     try {
       const attachment = await UploadFile(file);
-      setArticle((prev) => ({
+      setArticles((prev) => ({
         ...prev,
         attachments: [...prev.attachments, attachment],
       }));
@@ -168,185 +165,312 @@ export default function Editor() {
   };
 
   const updateFolderStructure = (newStructure) => {
-    setArticle((prev) => ({ ...prev, folder_structure: newStructure }));
+    setArticles((prev) => ({ ...prev, folder_structure: newStructure }));
   };
 
   if (isLoading && !editId) {
     return <div className="p-8">Loading...</div>;
   }
 
+  const isPublished = article.status === "published";
+
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          onClick={() => navigate(createPageUrl("Dashboard"))}
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Back to Dashboard
-        </Button>
-        <div className="flex gap-2">
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-7xl mx-auto p-6 md:p-8">
+        <div className="flex items-center gap-4 mb-8">
           <Button
-            onClick={() => handleSave("draft")}
-            disabled={isLoading || !article.title.trim()}
+            variant="outline"
+            size="icon"
+            onClick={() => navigate(createPageUrl("Dashboard"))}
+            className="border-slate-300"
           >
-            <Save className="w-4 h-4 mr-2" />
-            {isLoading ? "Saving..." : "Save Draft"}
+            <ArrowLeft className="w-4 h-4" />
           </Button>
-          <Button
-            onClick={() => handleSave("published")}
-            disabled={isLoading || !article.title.trim()}
-          >
-            <Eye className="w-4 h-4 mr-2" />
-            {isLoading ? "Publishing..." : "Publish"}
-          </Button>
-        </div>
-      </div>
-
-      {/* Form */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column: Basic Info */}
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Article Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  value={article.title}
-                  onChange={(e) =>
-                    setArticle((prev) => ({ ...prev, title: e.target.value }))
-                  }
-                  placeholder="Enter article title"
-                />
-              </div>
-              <div>
-                <Label htmlFor="author">Author</Label>
-                <Input
-                  id="author"
-                  value={article.author}
-                  onChange={(e) =>
-                    setArticle((prev) => ({ ...prev, author: e.target.value }))
-                  }
-                  placeholder="Enter author name (optional, auto-filled from user)"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  If left empty, it will default to your profile name.
-                </p>
-              </div>
-              <div>
-                <Label htmlFor="summary">Summary</Label>
-                <Textarea
-                  id="summary"
-                  value={article.summary}
-                  onChange={(e) =>
-                    setArticle((prev) => ({ ...prev, summary: e.target.value }))
-                  }
-                  placeholder="Brief summary (optional)"
-                  rows={3}
-                />
-              </div>
-              <div>
-                <Label htmlFor="content">Content</Label>
-                <Textarea
-                  id="content"
-                  value={article.content}
-                  onChange={(e) =>
-                    setArticle((prev) => ({ ...prev, content: e.target.value }))
-                  }
-                  placeholder="Write your article here..."
-                  rows={20}
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Category, Status, Priority */}
-          <Card>
-            <CardContent className="p-6 space-y-4">
-              <div>
-                <Label>Category</Label>
-                <Select
-                  value={article.category}
-                  onValueChange={(value) =>
-                    setArticle((prev) => ({ ...prev, category: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.value} value={cat.value}>
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Status</Label>
-                <Select
-                  value={article.status}
-                  onValueChange={(value) =>
-                    setArticle((prev) => ({ ...prev, status: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-sm font-medium text-slate-700">
-                  Priority
-                </Label>
-                <Select
-                  value={article.priority}
-                  onValueChange={(value) =>
-                    setArticle((prev) => ({ ...prev, priority: value }))
-                  }
-                >
-                  <SelectTrigger className="mt-1 border-slate-300">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRIORITY_OPTIONS.map((priority) => (
-                      <SelectItem key={priority.value} value={priority.value}>
-                        {priority.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-slate-900">
+              {editId ? "Edit Article" : "Create New Article"}
+            </h1>
+            <p className="text-slate-600">
+              Add knowledge to your internal documentation
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => handleSave("draft")}
+              disabled={isLoading || !article.title.trim()}
+              className="border-slate-300"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Save Draft
+            </Button>
+            <Button
+              onClick={() => handleSave("published")}
+              disabled={isLoading || !article.title.trim()}
+              className="bg-slate-800 hover:bg-slate-900"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              Publish
+            </Button>
+          </div>
         </div>
 
-        {/* Right Column: Tags, Attachments, Folder Structure */}
-        <div className="space-y-6">
-          {/* Tags */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Tags</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="newTag">Add New Tag</Label>
+        <div className="grid lg:grid-cols-4 gap-8">
+          <div className="lg:col-span-3 space-y-6">
+            <Card className="border-slate-200">
+              <CardContent className="p-6 space-y-6">
+                <div>
+                  <Label
+                    htmlFor="title"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Article Title
+                  </Label>
+                  <Input
+                    id="title"
+                    value={article.title}
+                    onChange={(e) =>
+                      setArticles((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    placeholder="Enter article title..."
+                    className="mt-1 text-lg font-semibold border-slate-300 focus:border-slate-500"
+                  />
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="author"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Author
+                  </Label>
+                  <Input
+                    id="author"
+                    value={article.author}
+                    onChange={(e) =>
+                      setArticles((prev) => ({
+                        ...prev,
+                        author: e.target.value,
+                      }))
+                    }
+                    placeholder="Author name..."
+                    className={`mt-1 border-slate-300 focus:border-slate-500 ${
+                      isPublished ? "bg-slate-50 text-slate-500" : ""
+                    }`}
+                    disabled={isPublished}
+                  />
+                  {isPublished && (
+                    <p className="text-xs text-slate-500 mt-1">
+                      Author cannot be changed after publication
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label
+                    htmlFor="summary"
+                    className="text-sm font-medium text-slate-700"
+                  >
+                    Summary
+                  </Label>
+                  <Textarea
+                    id="summary"
+                    value={article.summary}
+                    onChange={(e) =>
+                      setArticles((prev) => ({
+                        ...prev,
+                        summary: e.target.value,
+                      }))
+                    }
+                    placeholder="Brief summary of the article..."
+                    className="mt-1 border-slate-300 focus:border-slate-500"
+                    rows={3}
+                  />
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">
+                    Content
+                  </Label>
+                  <Textarea
+                    value={article.content}
+                    onChange={(e) =>
+                      setArticles((prev) => ({
+                        ...prev,
+                        content: e.target.value,
+                      }))
+                    }
+                    placeholder="Write your article content here. You can use HTML formatting if needed..."
+                    className="mt-1 border-slate-300 focus:border-slate-500 font-mono text-sm"
+                    rows={20}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    You can use basic HTML tags for formatting (h1, h2, h3, p,
+                    ul, ol, li, strong, em, etc.)
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <Card className="border-slate-200">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    File Attachments
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <input
+                      type="file"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="file-upload"
+                      multiple
+                    />
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        document.getElementById("file-upload").click()
+                      }
+                      disabled={isUploading}
+                      className="border-slate-300"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {isUploading ? "Uploading..." : "Upload Files"}
+                    </Button>
+                  </div>
+
+                  {article.attachments?.length > 0 && (
+                    <div className="space-y-3">
+                      {article.attachments.map((attachment, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                        >
+                          {attachment.type?.startsWith("image/") ? (
+                            <ImageIcon className="w-5 h-5 text-slate-500" />
+                          ) : (
+                            <FileText className="w-5 h-5 text-slate-500" />
+                          )}
+                          <span className="flex-1 text-sm font-medium text-slate-700">
+                            {attachment.filename}
+                          </span>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeAttachment(index)}
+                            className="h-8 w-8 text-slate-400 hover:text-red-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <CardContent>
+                <FolderStructureEditor
+                  value={article.folder_structure}
+                  onChange={updateFolderStructure}
+                />
+              </CardContent>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-lg">Settings</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">
+                    Category
+                  </Label>
+                  <Select
+                    value={article.category}
+                    onValueChange={(value) =>
+                      setArticles((prev) => ({ ...prev, category: value }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1 border-slate-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map((cat) => (
+                        <SelectItem key={cat.value} value={cat.value}>
+                          {cat.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">
+                    Status
+                  </Label>
+                  <Select
+                    value={article.status}
+                    onValueChange={(value) =>
+                      setArticles((prev) => ({ ...prev, status: value }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1 border-slate-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUS_OPTIONS.map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">
+                    Priority
+                  </Label>
+                  <Select
+                    value={article.priority}
+                    onValueChange={(value) =>
+                      setArticles((prev) => ({ ...prev, priority: value }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1 border-slate-300">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PRIORITY_OPTIONS.map((priority) => (
+                        <SelectItem key={priority.value} value={priority.value}>
+                          {priority.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Tag className="w-5 h-5" />
+                  Tags
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="flex gap-2">
                   <Input
-                    id="newTag"
                     value={newTag}
                     onChange={(e) => setNewTag(e.target.value)}
                     placeholder="Add tag..."
@@ -363,129 +487,55 @@ export default function Editor() {
                     <Plus className="w-4 h-4" />
                   </Button>
                 </div>
-              </div>
 
-              {existingTags.length > 0 && (
-                <div>
-                  <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Existing Tags
-                  </Label>
-                  <div className="flex flex-wrap gap-1 mt-2">
-                    {existingTags.map((tag, index) => (
-                      <Button
-                        key={index}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => addTag(tag)}
-                        className="h-6 px-2 text-xs bg-slate-100 text-slate-600 hover:bg-slate-200"
-                      >
-                        {tag}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {article.tags.length > 0 && (
-                <div>
-                  <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-                    Selected Tags
-                  </Label>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {article.tags.map((tag, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="bg-slate-100 text-slate-700 hover:bg-slate-200"
-                      >
-                        {tag}
-                        <button
-                          onClick={() => removeTag(tag)}
-                          className="ml-2 hover:text-red-600"
+                {existingTags.length > 0 && (
+                  <div>
+                    <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Existing Tags
+                    </Label>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {existingTags.map((tag, index) => (
+                        <Button
+                          key={index}
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => addTag(tag)}
+                          className="h-6 px-2 text-xs bg-slate-100 text-slate-600 hover:bg-slate-200"
                         >
-                          <X className="w-3 h-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Attachments */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Attachments</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="file-upload">Upload File</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="file-upload"
-                    type="file"
-                    onChange={handleFileUpload}
-                    disabled={isUploading}
-                    className="border-slate-300"
-                  />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      document.getElementById("file-upload").click()
-                    }
-                    disabled={isUploading}
-                  >
-                    <Upload className="w-4 h-4 mr-2" />
-                    {isUploading ? "Uploading..." : "Upload"}
-                  </Button>
-                </div>
-              </div>
-              {article.attachments.length > 0 && (
-                <div className="space-y-2">
-                  {article.attachments.map((att, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-2 bg-slate-50 rounded"
-                    >
-                      <div className="flex items-center gap-2">
-                        <ImageIcon className="w-5 h-5 text-slate-500" />
-                        <span className="text-sm">{att.name}</span>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          setArticle((prev) => ({
-                            ...prev,
-                            attachments: prev.attachments.filter(
-                              (_, i) => i !== index
-                            ),
-                          }))
-                        }
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
+                          {tag}
+                        </Button>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                )}
 
-          {/* Folder Structure */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Folder Structure</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <FolderStructureEditor
-                value={article.folder_structure}
-                onChange={updateFolderStructure}
-              />
-            </CardContent>
-          </Card>
+                {article.tags.length > 0 && (
+                  <div>
+                    <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Selected Tags
+                    </Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {article.tags.map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="bg-slate-100 text-slate-700 hover:bg-slate-200"
+                        >
+                          {tag}
+                          <button
+                            onClick={() => removeTag(tag)}
+                            className="ml-2 hover:text-red-600"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

@@ -371,7 +371,7 @@ export default function InternTracking() {
         )}
 
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent>
+          <DialogContent className="max-h-[100vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>
                 {editingIntern ? "Edit Intern" : "Add New Intern"}

@@ -1,9 +1,9 @@
 {
   "articles": [
     {
-      "id": "1758809320411",
+      "id": "1758890448422",
       "title": "Getting Started with Our Knowledge Base",
-      "content": "Welcome to the Knowledge Base\nThis internal knowledge management system is designed to help our team document, organize, and share important information about our projects, processes, and research findings.\n\nKey Features\nRich text editing with support for images and files\nHierarchical organization through categories\nTag-based classification for easy searching\nDraft and published status management\nFile attachment support\nStart creating your first article to contribute to our collective knowledge!",
+      "content": "<h2>Welcome to the Knowledge Base</h2><p>This internal knowledge management system is designed to help our team document, organize, and share important information about our projects, processes, and research findings.</p><h3>Key Features</h3><ul><li>Rich text editing with support for images and files</li><li>Hierarchical organization through categories</li><li>Tag-based classification for easy searching</li><li>Draft and published status management</li><li>File attachment support</li></ul><p>Start creating your first article to contribute to our collective knowledge!</p>",
       "summary": "An introduction to using our internal knowledge management system effectively.",
       "author": "negin",
       "category": "documentation",
@@ -12,12 +12,51 @@
       "tags": [
         "getting-started",
         "documentation",
-        "guide"
+        "guide",
+        "first-doc"
       ],
       "attachments": [],
       "folder_structure": {},
       "created_by": "",
-      "createdAt": "2025-09-25T14:08:40.411Z"
+      "createdAt": "2025-09-26T12:40:48.422Z"
+    },
+    {
+      "id": "1758892260992",
+      "title": "Research Methodology Framework",
+      "content": "<h2>Our Research Approach</h2><p>This document outlines the systematic approach we use for conducting research and documenting findings.</p><h3>Research Phases</h3><ul><li><strong>Problem Definition:</strong> Clearly articulate the research question</li><li><strong>Literature Review:</strong> Survey existing knowledge and solutions</li><li><strong>Methodology Selection:</strong> Choose appropriate research methods</li><li><strong>Data Collection:</strong> Gather relevant information and evidence</li><li><strong>Analysis:</strong> Process and interpret the collected data</li><li><strong>Documentation:</strong> Record findings and recommendations</li></ul><p>Each research project should follow this framework to ensure consistency and quality.</p>",
+      "summary": "A systematic framework for conducting and documenting research projects.",
+      "author": "negin",
+      "category": "research",
+      "status": "published",
+      "priority": "medium",
+      "tags": [
+        "research",
+        "methodology",
+        "framework"
+      ],
+      "attachments": [],
+      "folder_structure": {},
+      "created_by": "",
+      "createdAt": "2025-09-26T13:11:00.992Z"
+    },
+    {
+      "id": "1758894700611",
+      "title": "Team Onboarding Checklist",
+      "content": "<h2>New Team Member Onboarding</h2><p>Welcome to the team! This checklist will help ensure you have everything needed to get started.</p><h3>First Week</h3><ul><li>Set up development environment</li><li>Review team documentation in this knowledge base</li><li>Attend team meetings and introductions</li><li>Complete initial training modules</li></ul><h3>First Month</h3><ul><li>Shadow experienced team members</li><li>Contribute to your first project</li><li>Add your first article to the knowledge base</li><li>Complete onboarding feedback survey</li></ul>",
+      "summary": "Essential steps and resources for new team members joining our organization.",
+      "author": "negin",
+      "category": "processes",
+      "status": "published",
+      "priority": "high",
+      "tags": [
+        "un-boarding",
+        "new-hire",
+        "checklist"
+      ],
+      "attachments": [],
+      "folder_structure": {},
+      "created_by": "mock-user-1",
+      "createdAt": "2025-09-26T13:51:40.611Z"
     }
   ]
 }

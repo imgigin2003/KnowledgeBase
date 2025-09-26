@@ -1,3 +1,176 @@
 {
-  "interns": []
+  "interns": [
+    {
+      "id": "1758888273578",
+      "name": "Fateme Sheykh Shamaei",
+      "email": "-",
+      "start_date": "2025-09-01",
+      "program": "Rust Expert / Python Beginner",
+      "mentor": "Mosh Hamedani",
+      "status": "active",
+      "requirements": [
+        {
+          "id": "1758888099109",
+          "title": "Python Mastery",
+          "description": "",
+          "type": "course",
+          "completed": false
+        },
+        {
+          "id": "1758888121271",
+          "title": "Section 1 & 2",
+          "description": "Getting Started & Primitive Types",
+          "type": "exercise",
+          "completed": true
+        },
+        {
+          "id": "1758888155188",
+          "title": "Section 3 & 4",
+          "description": "Control Flow & Functions",
+          "type": "exercise",
+          "completed": true
+        },
+        {
+          "id": "1758888184447",
+          "title": "Section 5 & 6",
+          "description": "Data Structures & Exceptions",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888208005",
+          "title": "Section 7 & 8",
+          "description": "Classes & Modules",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888263347",
+          "title": "Section 9 ",
+          "description": "Python Standard Library ",
+          "type": "exercise",
+          "completed": false
+        }
+      ],
+      "notes": "has experience in rust, codes clean and organized",
+      "createdAt": "2025-09-26T12:04:33.578Z"
+    },
+    {
+      "id": "1758888524377",
+      "name": "Narges Abaeijabri",
+      "email": "Narjes.Abaeijabri@yahoo.com",
+      "start_date": "2025-09-15",
+      "program": "Bio Informatic Expert / Python Beginner",
+      "mentor": "Mosh Hamedani",
+      "status": "active",
+      "requirements": [
+        {
+          "id": "1758888456147",
+          "title": "Python Mastery",
+          "description": "",
+          "type": "course",
+          "completed": false
+        },
+        {
+          "id": "1758888463264",
+          "title": "Section 1 & 2",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888472753",
+          "title": "Section 3 & 4",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888485113",
+          "title": "Section 5 & 6",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888493635",
+          "title": "Section 7 & 7",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        }
+      ],
+      "notes": "has experience in biotech / bioinformatic",
+      "createdAt": "2025-09-26T12:08:44.377Z"
+    },
+    {
+      "id": "1758888862800",
+      "name": "Mehrimah",
+      "email": "-",
+      "start_date": "2025-09-17",
+      "program": "Regular Intern",
+      "mentor": "Jayson Lennon",
+      "status": "active",
+      "requirements": [
+        {
+          "id": "1758888713313",
+          "title": "Rust Programming Developer's Guide",
+          "description": "",
+          "type": "course",
+          "completed": false
+        },
+        {
+          "id": "1758888739200",
+          "title": "Section 1 & 2",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888749363",
+          "title": "Section 3 & 4",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888762142",
+          "title": "Section 5 & 6",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888780980",
+          "title": "Section 7 & 8",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888805174",
+          "title": "Section 9 & 10",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888824139",
+          "title": "Section 11 & 12",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1758888835516",
+          "title": "Final Assignment",
+          "description": "",
+          "type": "project",
+          "completed": false
+        }
+      ],
+      "notes": "has little experience in js & front-end, 0 in rust and python",
+      "createdAt": "2025-09-26T12:14:22.800Z"
+    }
+  ]
 }

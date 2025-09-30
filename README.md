@@ -163,8 +163,8 @@ Verify: Logs show `"Server running on port 3001"`. Data persists via mounted JSO
 
 - if you encounter with `- err: exec: "docker-credential-desktop": executable file not found in $PATH` error, complete the following:
 
-1. Access `~/.docker/config.json`
-2. Change `credsStore` to `credStore`
+1. Access `nano ~/.docker/config.json`
+2. Modify `credsStore` to `credStore`
 3. Save and Run Again
 
 ## Have Fun!✨

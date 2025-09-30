@@ -5,6 +5,8 @@ import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import {
   ArrowLeft,
   Edit3,
@@ -283,11 +285,10 @@ export default function ArticlePage() {
 
             {/* Content */}
             <Card>
-              <CardContent className="p-6">
-                <div
-                  className="prose prose-slate max-w-none prose-headings:text-slate-900 prose-p:text-slate-700 prose-li:text-slate-700 prose-strong:text-slate-900"
-                  dangerouslySetInnerHTML={{ __html: article.content }}
-                />
+              <CardContent className="p-6 prose prose-slate max-w-none">
+                <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                  {article.content || ""}
+                </ReactMarkdown>
               </CardContent>
             </Card>
 

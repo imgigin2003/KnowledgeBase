@@ -35,7 +35,7 @@
           "title": "Section 5 & 6",
           "description": "Data Structures & Exceptions",
           "type": "exercise",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1758888208005",
@@ -49,6 +49,13 @@
           "title": "Section 9 ",
           "description": "Python Standard Library ",
           "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1759253575472",
+          "title": "Final Project",
+          "description": "",
+          "type": "project",
           "completed": false
         }
       ],
@@ -97,6 +104,13 @@
           "title": "Section 7 & 7",
           "description": "",
           "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1759253593367",
+          "title": "Final Project",
+          "description": "",
+          "type": "project",
           "completed": false
         }
       ],
@@ -163,7 +177,7 @@
         },
         {
           "id": "1758888835516",
-          "title": "Final Assignment",
+          "title": "Final Project",
           "description": "",
           "type": "project",
           "completed": false
@@ -221,6 +235,13 @@
           "title": "Section 9",
           "description": "",
           "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1759253611816",
+          "title": "Final Project",
+          "description": "",
+          "type": "project",
           "completed": false
         }
       ],

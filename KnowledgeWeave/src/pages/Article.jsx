@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Article } from "@/entities/Article";
 import { Link, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { CommentForm } from "@/components/ui/comment-form";
+import { CommentList } from "@/components/ui/comment-list";
 import { Card, CardContent } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -21,6 +23,7 @@ import {
   ChevronDown,
   ChevronRight,
   Tag,
+  MessageCircle,
 } from "lucide-react";
 import {
   AlertDialog,
@@ -46,16 +49,22 @@ export default function ArticlePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedFolders, setExpandedFolders] = useState(new Set());
+  const [comments, setComments] = useState([]);
+  const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [commentError, setCommentError] = useState("");
 
   const urlParams = new URLSearchParams(window.location.search);
   const articleId = urlParams.get("id");
 
+  const commentsRef = useRef(null);
+
   useEffect(() => {
     const loadArticle = async (id) => {
       try {
-        const foundArticle = await Article.get(id); // بهینه‌سازی: مستقیم get
+        const foundArticle = await Article.get(id);
         if (foundArticle) {
           setArticles(foundArticle);
+          setComments(foundArticle.comments || []);
         } else {
           navigate(createPageUrl("Dashboard"));
         }
@@ -80,6 +89,22 @@ export default function ArticlePage() {
     } catch (e) {
       console.error("Error deleting article:", e);
       setIsDeleting(false);
+    }
+  };
+
+  const handleAddComment = async (commentData) => {
+    setIsSubmittingComment(true);
+    setCommentError("");
+    try {
+      const updatedArticle = await Article.addComment(article.id, commentData);
+      setComments([
+        ...comments,
+        updatedArticle.comments[updatedArticle.comments.length - 1],
+      ]);
+    } catch (error) {
+      setCommentError("Failed to Post Comment... Try again.");
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -191,6 +216,20 @@ export default function ArticlePage() {
           Back to Dashboard
         </Button>
         <div className="flex items-center gap-2">
+          {article.status === "published" && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                commentsRef.current?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start",
+                });
+              }}
+            >
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Leave a Comment!
+            </Button>
+          )}
           <Link to={createPageUrl(`Editor?edit=${article.id}`)}>
             <Button variant="outline">
               <Edit3 className="w-4 h-4 mr-2" />
@@ -362,6 +401,25 @@ export default function ArticlePage() {
             <div className="space-y-1">
               {renderStructure(structure, ["root"])}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Only display when article is published */}
+      {article.status === "published" && (
+        <Card ref={commentsRef}>
+          {" "}
+          {/* ref رو اینجا اضافه کن */}
+          <CardContent className="p-6 space-y-6">
+            <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-900">
+              <User className="w-5 h-5" /> Comments ({comments.length})
+            </h3>
+            <CommentList comments={comments} />
+            <CommentForm
+              onSubmit={handleAddComment}
+              isSubmitting={isSubmittingComment}
+              error={commentError}
+            />
           </CardContent>
         </Card>
       )}

@@ -36,6 +36,19 @@ export const Article = {
     if (!res.ok) throw new Error("Failed to fetch article");
     return res.json();
   },
+  addComment: async (articleId, commentData) => {
+    const res = await fetch(`${API_BASE}/articles/${articleId}/comments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...commentData,
+        id: crypto.randomUUID(),
+        createdAt: new Date().toISOString(),
+      }),
+    });
+    if (!res.ok) throw new Error("Failed to add comment");
+    return res.json();
+  },
 };
 
 export default Article;

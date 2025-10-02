@@ -87,5 +87,37 @@
       "description": "When the article was last updated"
     }
   },
+  "comments": {
+    "type": "array",
+    "items": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique ID for the comment"
+        },
+        "name": {
+          "type": "string",
+          "description": "Comment Author's name"
+        },
+        "email": {
+          "type": "string",
+          "nullable": "true",
+          "description": "Comment Author's email (Optional)"
+        },
+        "content": {
+          "type": "string",
+          "description": "Comment text"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the comment was created"
+        }
+      },
+      "required": ["name", "content", "createdAt"]
+    },
+    "description": "User Comments on The Article"
+  },
   "required": ["title", "content"]
 }

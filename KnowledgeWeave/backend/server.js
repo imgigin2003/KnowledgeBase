@@ -132,6 +132,31 @@ app.get("/api/interns/:id", async (req, res) => {
   else res.status(404).json({ error: "Not found" });
 });
 
+app.post("/api/articles/:id/comments", async (req, res) => {
+  await articlesDb.read();
+
+  const id = req.params.id;
+  const articleIndex = articlesDb.data.articles.findIndex((a) => a.id === id);
+  if (articleIndex === -1)
+    return res.status(404).json({ error: "Article not found" });
+
+  const newComment = {
+    id: Date.now().toString() + Math.random(),
+    name: req.body.name,
+    email: req.body.email || null,
+    content: req.body.content,
+    createdAt: new Date().toISOString(),
+  };
+
+  if (!articlesDb.data.articles[articleIndex].comments) {
+    articlesDb.data.articles[articleIndex].comments = [];
+  }
+  articlesDb.data.articles[articleIndex].comments.push(newComment);
+
+  await articlesDb.write();
+  res.json(articlesDb.data.articles[articleIndex]);
+});
+
 // Serve static Vite build (frontend)
 app.use(express.static(path.join(__dirname, "../dist")));
 

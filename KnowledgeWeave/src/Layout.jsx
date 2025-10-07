@@ -1,3 +1,4 @@
+// src/Layout.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -33,22 +34,11 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 
-const categoryIcons = {
-  documentation: FileText,
-  research: BookOpen,
-  tutorials: GraduationCap,
-  references: BookOpen,
-  projects: Building,
-  processes: Folder,
-};
-
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
   const [articles, setArticles] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [expandedCategories, setExpandedCategories] = useState(
-    new Set(["documentation"])
-  );
+  const [expandedFolders, setExpandedFolders] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
 
   // Hide sidebar for editor pages
@@ -82,23 +72,99 @@ export default function Layout({ children, currentPageName }) {
     );
   }, [articles, searchTerm]);
 
-  const groupedArticles = React.useMemo(() => {
-    return filteredArticles.reduce((groups, article) => {
-      const category = article.category || "documentation";
-      if (!groups[category]) groups[category] = [];
-      groups[category].push(article);
-      return groups;
-    }, {});
-  }, [filteredArticles]);
+  const buildTree = (articlesList) => {
+    const root = { children: {}, articles: [] };
+    articlesList.forEach((article) => {
+      let paths =
+        article.categories || (article.category ? [article.category] : []);
+      if (paths.length === 0) {
+        if (!root.articles.some((a) => a.id === article.id)) {
+          root.articles.push(article);
+        }
+      } else {
+        paths.forEach((path) => {
+          let current = root;
+          path
+            .split("/")
+            .filter(Boolean)
+            .forEach((folderName) => {
+              if (!current.children[folderName]) {
+                current.children[folderName] = { children: {}, articles: [] };
+              }
+              current = current.children[folderName];
+            });
+          if (!current.articles.some((a) => a.id === article.id)) {
+            current.articles.push(article);
+          }
+        });
+      }
+    });
+    return root;
+  };
 
-  const toggleCategory = (category) => {
-    const newExpanded = new Set(expandedCategories);
-    if (newExpanded.has(category)) {
-      newExpanded.delete(category);
-    } else {
-      newExpanded.add(category);
-    }
-    setExpandedCategories(newExpanded);
+  const tree = React.useMemo(
+    () => buildTree(filteredArticles),
+    [filteredArticles]
+  );
+
+  const toggleFolder = (pathString) => {
+    setExpandedFolders((prev) => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(pathString)) {
+        newExpanded.delete(pathString);
+      } else {
+        newExpanded.add(pathString);
+      }
+      return newExpanded;
+    });
+  };
+
+  const renderNode = (node, path = []) => {
+    const folderEntries = Object.entries(node.children);
+    const folderItems = folderEntries.map(([key, child]) => {
+      const currentPath = [...path, key];
+      const pathString = currentPath.join("/");
+      const isExpanded = expandedFolders.has(pathString);
+
+      return (
+        <div key={key}>
+          <button
+            onClick={() => toggleFolder(pathString)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+          >
+            {isExpanded ? (
+              <ChevronDown className="w-4 h-4 text-slate-400" />
+            ) : (
+              <ChevronRight className="w-4 h-4 text-slate-400" />
+            )}
+            <Folder className="w-5 h-5 text-slate-600" />
+            <span className="flex-1 text-left">{key}</span>
+          </button>
+          {isExpanded && (
+            <div className="ml-6 border-l border-slate-200 pl-2">
+              {renderNode(child, currentPath)}
+            </div>
+          )}
+        </div>
+      );
+    });
+
+    const articleItems = node.articles.map((article) => (
+      <Link
+        key={article.id}
+        to={createPageUrl(`Article?id=${article.id}`)}
+        className="block px-3 py-2 text-sm text-slate-700 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors ml-4"
+      >
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-5 h-5 flex-shrink-0">
+            <FileText className="w-5 h-5 text-slate-600" />
+          </div>
+          <span className="truncate">{article.title}</span>
+        </div>
+      </Link>
+    ));
+
+    return [...folderItems, ...articleItems];
   };
 
   // If it's an editor page, return children without sidebar
@@ -140,48 +206,46 @@ export default function Layout({ children, currentPageName }) {
             <SidebarGroup>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        className={`hover:bg-slate-100 transition-colors mb-2 ${
-                          location.pathname === createPageUrl("Dashboard")
-                            ? "bg-slate-100"
-                            : ""
-                        }`}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className={`hover:bg-slate-100 transition-colors mb-2 ${
+                        location.pathname === createPageUrl("Dashboard")
+                          ? "bg-slate-100"
+                          : ""
+                      }`}
+                    >
+                      <Link
+                        to={createPageUrl("Dashboard")}
+                        className="flex flex-row items-center gap-2 w-full px-3 py-2"
                       >
-                        <Link
-                          to={createPageUrl("Dashboard")}
-                          className="flex flex-row items-center gap-2 w-full px-3 py-2"
-                        >
-                          <Home className="w-5 h-5 flex-shrink-50" />
-                          <span className="font-medium whitespace-nowrap">
-                            Dashboard
-                          </span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton
-                        asChild
-                        className={`hover:bg-slate-100 transition-colors mb-2 ${
-                          location.pathname === createPageUrl("InternTracking")
-                            ? "bg-slate-100"
-                            : ""
-                        }`}
+                        <Home className="w-5 h-5 flex-shrink-0" />
+                        <span className="font-medium whitespace-nowrap">
+                          Dashboard
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      className={`hover:bg-slate-100 transition-colors mb-2 ${
+                        location.pathname === createPageUrl("InternTracking")
+                          ? "bg-slate-100"
+                          : ""
+                      }`}
+                    >
+                      <Link
+                        to={createPageUrl("InternTracking")}
+                        className="flex flex-row items-center justify-start gap-3 w-full px-3 py-2"
                       >
-                        <Link
-                          to={createPageUrl("InternTracking")}
-                          className="flex flex-row items-center justify-start gap-3 w-full px-3 py-2"
-                        >
-                          <ClipboardList className="w-5 h-5 flex-shrink-0" />
-                          <span className="font-medium whitespace-nowrap">
-                            Intern Tracking
-                          </span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  </SidebarMenu>
+                        <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                        <span className="font-medium whitespace-nowrap">
+                          Intern Tracking
+                        </span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -196,57 +260,7 @@ export default function Layout({ children, currentPageName }) {
                     Loading articles...
                   </div>
                 ) : (
-                  <div className="space-y-2">
-                    {Object.entries(groupedArticles).map(
-                      ([category, categoryArticles]) => {
-                        const Icon = categoryIcons[category] || FileText;
-                        const isExpanded = expandedCategories.has(category);
-
-                        return (
-                          <div key={category} className="space-y-1">
-                            <button
-                              onClick={() => toggleCategory(category)}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-semibold text-slate-800 hover:bg-slate-100 rounded-lg transition-colors border-b border-slate-100"
-                            >
-                              <Icon className="w-5 h-5 text-slate-600" />
-                              <span className="capitalize flex-1 text-left">
-                                {category}
-                              </span>
-                              <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
-                                {categoryArticles.length}
-                              </span>
-                              {isExpanded ? (
-                                <ChevronDown className="w-4 h-4 text-slate-400" />
-                              ) : (
-                                <ChevronRight className="w-4 h-4 text-slate-400" />
-                              )}
-                            </button>
-
-                            {isExpanded && (
-                              <div className="ml-6 space-y-0.5 pb-2">
-                                {categoryArticles.map((article) => (
-                                  <Link
-                                    key={article.id}
-                                    to={createPageUrl(
-                                      `Article?id=${article.id}`
-                                    )}
-                                    className="block px-3 py-2 text-sm text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-md transition-colors"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-1.5 h-1.5 bg-slate-300 rounded-full"></div>
-                                      <span className="truncate">
-                                        {article.title}
-                                      </span>
-                                    </div>
-                                  </Link>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                    )}
-                  </div>
+                  <div className="space-y-1">{renderNode(tree)}</div>
                 )}
               </SidebarGroupContent>
             </SidebarGroup>

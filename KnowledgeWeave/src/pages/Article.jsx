@@ -9,6 +9,8 @@ import { CommentList } from "@/components/ui/comment-list";
 import { Card, CardContent } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
+import rehypeHighlight from "rehype-highlight";
+import "highlight.js/styles/github.css";
 import {
   ArrowLeft,
   Edit3,
@@ -145,6 +147,29 @@ export default function ArticlePage() {
     return <div className="p-8">Article not found</div>;
   }
 
+  const getCategoryColor = (category) => {
+    const normalized = category?.toLowerCase();
+    if (categoryColors[normalized]) return categoryColors[normalized];
+
+    const keys = Object.keys(categoryColors);
+    const hash = Array.from(normalized || "").reduce(
+      (acc, char) => acc + char.charCodeAt(0),
+      0
+    );
+    const randomIndex = hash % keys.length;
+    return categoryColors[keys[randomIndex]] || "bg-gray-400";
+  };
+
+  const categoryValue =
+    article?.category ||
+    (Array.isArray(article?.categories)
+      ? article.categories[0]
+      : article?.categories) ||
+    "";
+
+  const parentCategory = categoryValue?.split("/")?.[0] || "";
+  console.log("Parent category:", parentCategory);
+
   const renderStructure = (struct, path = []) => {
     const items = [];
 
@@ -277,9 +302,12 @@ export default function ArticlePage() {
         <div className="space-y-4">
           <div className="p-8 border-b border-slate-100">
             <div className="flex flex-wrap gap-2 mb-4">
-              <Badge className={`${categoryColors[article.category]} border`}>
-                {article.category}
-              </Badge>
+              {parentCategory && (
+                <Badge className={`${getCategoryColor(parentCategory)}`}>
+                  {parentCategory}
+                </Badge>
+              )}
+
               <Badge
                 variant={
                   article.status === "published" ? "default" : "secondary"
@@ -325,7 +353,7 @@ export default function ArticlePage() {
             {/* Content */}
             <Card>
               <CardContent className="p-6 prose prose-slate max-w-none">
-                <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                <ReactMarkdown rehypePlugins={[rehypeRaw, rehypeHighlight]}>
                   {article.content || ""}
                 </ReactMarkdown>
               </CardContent>

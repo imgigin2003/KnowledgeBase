@@ -1,3 +1,4 @@
+// src/pages/Dashboard.jsx
 import { useState, useEffect } from "react";
 import { Article } from "@/entities/Article";
 import { Link } from "react-router-dom";
@@ -34,8 +35,13 @@ export default function Dashboard() {
   const draftCount = articles.filter((a) => a.status === "draft").length;
 
   const categoryStats = articles.reduce((stats, article) => {
-    const category = article.category || "documentation";
-    stats[category] = (stats[category] || 0) + 1;
+    const cats =
+      article.categories ||
+      (article.category ? [article.category] : ["uncategorized"]);
+    cats.forEach((cat) => {
+      const topLevel = cat.split("/")[0];
+      stats[topLevel] = (stats[topLevel] || 0) + 1;
+    });
     return stats;
   }, {});
 
@@ -46,6 +52,7 @@ export default function Dashboard() {
     references: "bg-orange-100 text-orange-800",
     projects: "bg-red-100 text-red-800",
     processes: "bg-yellow-100 text-yellow-800",
+    uncategorized: "bg-gray-100 text-gray-800",
   };
 
   if (isLoading) {
@@ -184,10 +191,16 @@ export default function Dashboard() {
                             </span>
                             <Badge
                               className={`${
-                                categoryColors[article.category]
+                                categoryColors[
+                                  article.categories?.[0]?.split("/")[0] ||
+                                    article.category ||
+                                    "uncategorized"
+                                ]
                               } border-0`}
                             >
-                              {article.category}
+                              {article.categories?.[0] ||
+                                article.category ||
+                                "uncategorized"}
                             </Badge>
                             <Badge
                               variant={

@@ -18,18 +18,10 @@
       "type": "string",
       "description": "Article author name (for display purposes)"
     },
-    "category": {
-      "type": "string",
-      "enum": [
-        "documentation",
-        "research",
-        "tutorials",
-        "references",
-        "projects",
-        "processes"
-      ],
-      "default": "documentation",
-      "description": "Article category"
+    "categories": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Array of category paths (e.g., ['Documentation/Sub1', 'Research']"
     },
     "tags": {
       "type": "array",

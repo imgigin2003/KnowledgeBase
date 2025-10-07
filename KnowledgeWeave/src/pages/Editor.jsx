@@ -1,3 +1,4 @@
+// src/pages/Editor.jsx
 import { useState, useEffect } from "react";
 import { Article } from "@/entities/Article";
 import { user } from "@/entities/User";
@@ -30,15 +31,6 @@ import {
 
 import FolderStructureEditor from "../components/editor/FolderStructureEditor";
 
-const CATEGORIES = [
-  { value: "documentation", label: "Documentation" },
-  { value: "research", label: "Research" },
-  { value: "tutorials", label: "Tutorials" },
-  { value: "references", label: "References" },
-  { value: "projects", label: "Projects" },
-  { value: "processes", label: "Processes" },
-];
-
 const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "published", label: "Published" },
@@ -63,18 +55,45 @@ export default function Editor() {
     content: "",
     summary: "",
     author: "",
-    category: "documentation",
     status: "draft",
     priority: "medium",
     tags: [],
     attachments: [],
     folder_structure: {},
     created_by: "",
+    categories: [], // New: array of path strings
   });
   const [newTag, setNewTag] = useState("");
+  const [categories, setCategories] = useState([
+    { id: crypto.randomUUID(), name: "", subcategories: [] },
+  ]);
 
   const urlParams = new URLSearchParams(window.location.search);
   const editId = urlParams.get("edit");
+
+  const buildTreeFromPaths = (paths) => {
+    const root = [];
+
+    paths.forEach((path) => {
+      const parts = path.split("/").filter(Boolean);
+      let currentLevel = root;
+
+      parts.forEach((part) => {
+        let existingNode = currentLevel.find((node) => node.name === part);
+        if (!existingNode) {
+          existingNode = {
+            id: crypto.randomUUID(),
+            name: part,
+            subcategories: [],
+          };
+          currentLevel.push(existingNode);
+        }
+        currentLevel = existingNode.subcategories;
+      });
+    });
+
+    return root;
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -99,6 +118,14 @@ export default function Editor() {
           const foundArticle = await Article.get(editId);
           if (foundArticle) {
             setArticles(foundArticle);
+            const categoryPaths =
+              foundArticle.categories && foundArticle.categories.length > 0
+                ? foundArticle.categories
+                : foundArticle.category
+                ? [foundArticle.category]
+                : [];
+
+            setCategories(buildTreeFromPaths(categoryPaths));
           }
         }
       } catch (error) {
@@ -145,12 +172,31 @@ export default function Editor() {
     }
   };
 
+  const flattenCategories = (nodes, parentPath = "") => {
+    let result = [];
+    nodes.forEach((node) => {
+      const currentPath = parentPath ? `${parentPath}/${node.name}` : node.name;
+      result.push(currentPath);
+      if (node.subcategories?.length > 0) {
+        result = result.concat(
+          flattenCategories(node.subcategories, currentPath)
+        );
+      }
+    });
+    return result;
+  };
+
   const handleSave = async (status = article.status) => {
     if (!article.title.trim()) return;
 
     setIsLoading(true);
     try {
-      const saveData = { ...article, status };
+      const saveData = {
+        ...article,
+        status,
+        categories: flattenCategories(categories),
+      };
+
       if (editId) {
         await Article.update(editId, saveData);
       } else {
@@ -173,6 +219,74 @@ export default function Editor() {
   }
 
   const isPublished = article.status === "published";
+
+  const renderCategoryTree = (nodes, parentIndex = null) => {
+    return nodes.map((node, index) => (
+      <div key={node.id} className="ml-4 mt-2">
+        <div className="flex items-center gap-2">
+          <Input
+            value={node.name}
+            onChange={(e) => {
+              const newCats = structuredClone(categories);
+              const updateNode = (list) => {
+                list.forEach((item) => {
+                  if (item.id === node.id) item.name = e.target.value;
+                  else if (item.subcategories) updateNode(item.subcategories);
+                });
+              };
+              updateNode(newCats);
+              setCategories(newCats);
+            }}
+            placeholder="Category name"
+            className="border-slate-300"
+          />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newCats = structuredClone(categories);
+              const removeNode = (list) => {
+                const idx = list.findIndex((item) => item.id === node.id);
+                if (idx !== -1) list.splice(idx, 1);
+                else list.forEach((item) => removeNode(item.subcategories));
+              };
+              removeNode(newCats);
+              setCategories(newCats);
+            }}
+          >
+            -
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const newCats = structuredClone(categories);
+              const addSub = (list) => {
+                list.forEach((item) => {
+                  if (item.id === node.id) {
+                    item.subcategories.push({
+                      id: crypto.randomUUID(),
+                      name: "",
+                      subcategories: [],
+                    });
+                  } else if (item.subcategories) addSub(item.subcategories);
+                });
+              };
+              addSub(newCats);
+              setCategories(newCats);
+            }}
+          >
+            +
+          </Button>
+        </div>
+        {node.subcategories?.length > 0 && (
+          <div className="ml-6">
+            {renderCategoryTree(node.subcategories, index)}
+          </div>
+        )}
+      </div>
+    ));
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -285,17 +399,20 @@ export default function Editor() {
                         summary: e.target.value,
                       }))
                     }
-                    placeholder="Brief summary of the article..."
-                    className="mt-1 border-slate-300 focus:border-slate-500"
-                    rows={3}
+                    placeholder="Brief summary..."
+                    className="mt-1 min-h-[100px] border-slate-300 focus:border-slate-500"
                   />
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium text-slate-700">
+                  <Label
+                    htmlFor="content"
+                    className="text-sm font-medium text-slate-700"
+                  >
                     Content
                   </Label>
                   <Textarea
+                    id="content"
                     value={article.content}
                     onChange={(e) =>
                       setArticles((prev) => ({
@@ -303,85 +420,80 @@ export default function Editor() {
                         content: e.target.value,
                       }))
                     }
-                    placeholder="Write your article content here. You can use HTML formatting if needed..."
-                    className="mt-1 border-slate-300 focus:border-slate-500 font-mono text-sm"
-                    rows={20}
+                    placeholder="Write your article content (supports Markdown)..."
+                    className="mt-1 min-h-[300px] border-slate-300 focus:border-slate-500 font-mono text-sm"
                   />
-                  <p className="text-xs text-slate-500 mt-1">
-                    You can use basic HTML tags for formatting (h1, h2, h3, p,
-                    ul, ol, li, strong, em, etc.)
-                  </p>
                 </div>
               </CardContent>
             </Card>
 
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="border-slate-200">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    File Attachments
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <input
-                      type="file"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                      id="file-upload"
-                      multiple
-                    />
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        document.getElementById("file-upload").click()
-                      }
-                      disabled={isUploading}
-                      className="border-slate-300"
-                    >
-                      <Upload className="w-4 h-4 mr-2" />
-                      {isUploading ? "Uploading..." : "Upload Files"}
-                    </Button>
-                  </div>
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <FileText className="w-5 h-5" />
+                  File Attachments
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <input
+                    type="file"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                    id="file-upload"
+                    multiple
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      document.getElementById("file-upload").click()
+                    }
+                    disabled={isUploading}
+                    className="border-slate-300"
+                  >
+                    <Upload className="w-4 h-4 mr-2" />
+                    {isUploading ? "Uploading..." : "Upload Files"}
+                  </Button>
+                </div>
 
-                  {article.attachments?.length > 0 && (
-                    <div className="space-y-3">
-                      {article.attachments.map((attachment, index) => (
-                        <div
-                          key={index}
-                          className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                {article.attachments?.length > 0 && (
+                  <div className="space-y-3">
+                    {article.attachments.map((attachment, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg"
+                      >
+                        {attachment.type?.startsWith("image/") ? (
+                          <ImageIcon className="w-5 h-5 text-slate-500" />
+                        ) : (
+                          <FileText className="w-5 h-5 text-slate-500" />
+                        )}
+                        <span className="flex-1 text-sm font-medium text-slate-700">
+                          {attachment.filename}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeAttachment(index)}
+                          className="h-8 w-8 text-slate-400 hover:text-red-600"
                         >
-                          {attachment.type?.startsWith("image/") ? (
-                            <ImageIcon className="w-5 h-5 text-slate-500" />
-                          ) : (
-                            <FileText className="w-5 h-5 text-slate-500" />
-                          )}
-                          <span className="flex-1 text-sm font-medium text-slate-700">
-                            {attachment.filename}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeAttachment(index)}
-                            className="h-8 w-8 text-slate-400 hover:text-red-600"
-                          >
-                            <X className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                          <X className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              <CardContent>
+            <Card>
+              <CardContent className="p-6">
                 <FolderStructureEditor
                   value={article.folder_structure}
                   onChange={updateFolderStructure}
                 />
               </CardContent>
-            </div>
+            </Card>
           </div>
 
           <div className="space-y-6">
@@ -390,29 +502,6 @@ export default function Editor() {
                 <CardTitle className="text-lg">Settings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-sm font-medium text-slate-700">
-                    Category
-                  </Label>
-                  <Select
-                    value={article.category}
-                    onValueChange={(value) =>
-                      setArticles((prev) => ({ ...prev, category: value }))
-                    }
-                  >
-                    <SelectTrigger className="mt-1 border-slate-300">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map((cat) => (
-                        <SelectItem key={cat.value} value={cat.value}>
-                          {cat.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 <div>
                   <Label className="text-sm font-medium text-slate-700">
                     Status
@@ -457,6 +546,37 @@ export default function Editor() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Tag className="w-5 h-5" />
+                  Categories
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {renderCategoryTree(categories)}
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setCategories([
+                        ...categories,
+                        {
+                          id: crypto.randomUUID(),
+                          name: "",
+                          subcategories: [],
+                        },
+                      ])
+                    }
+                    className="w-full border-slate-300"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Add Root Category
+                  </Button>
                 </div>
               </CardContent>
             </Card>

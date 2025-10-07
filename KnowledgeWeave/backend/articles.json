@@ -18,7 +18,10 @@
       "attachments": [],
       "folder_structure": {},
       "created_by": "",
-      "createdAt": "2025-09-26T12:40:48.422Z"
+      "createdAt": "2025-09-26T12:40:48.422Z",
+      "categories": [
+        "documentation"
+      ]
     },
     {
       "id": "1758892260992",
@@ -73,6 +76,31 @@
       "folder_structure": {},
       "created_by": "mock-user-1",
       "createdAt": "2025-09-26T13:51:40.611Z"
+    },
+    {
+      "id": "1759845131472",
+      "title": "Building Smart IoT Systems with Python and Rust",
+      "content": "<h2>Introduction</h2><p>Internet of Things (IoT) systems are transforming the way we interact with the physical world. From smart homes to industrial automation, IoT connects devices through the power of software and networks.</p><h3>Why Python and Rust?</h3><ul><li><strong>Python</strong> offers ease of use, rich libraries, and rapid prototyping capabilities.</li><li><strong>Rust</strong> ensures safety, concurrency, and performance in embedded or edge computing.</li></ul><p>Combining both can lead to a powerful hybrid architecture.</p><h3>Example Use Case</h3><p>Consider a smart greenhouse system. Python handles the data analytics and dashboard, while Rust manages low-level sensor control.</p><pre><code class='language-python'># Python Example: reading temperature data\\nimport requests\\nresponse = requests.get('http://greenhouse.local/sensors/temp')\\nprint(response.json())</code></pre><pre><code class='language-rust'>// Rust Example: controlling the actuator\\nfn main() {\\n    println!(\\\"Turning on water pump...\\\");\\n}</code></pre><p>This combination offers the best of both worlds: developer speed and system-level reliability.</p>",
+      "summary": "A practical overview of how to connect and automate devices using Python and Rust for IoT applications",
+      "author": "Negin",
+      "status": "published",
+      "priority": "medium",
+      "tags": [
+        "IoT",
+        "Rust",
+        "Python",
+        "embedded-systems"
+      ],
+      "attachments": [],
+      "folder_structure": {},
+      "created_by": "mock-user-1",
+      "categories": [
+        "Technology",
+        "Technology/IoT",
+        "Technology/IoT/Python",
+        "Technology/IoT/Rust"
+      ],
+      "createdAt": "2025-10-07T13:52:11.472Z"
     }
   ]
 }

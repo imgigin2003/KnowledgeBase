@@ -1,4 +1,3 @@
-// src/Layout.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -44,20 +43,29 @@ export default function Layout({ children, currentPageName }) {
   // Hide sidebar for editor pages
   const isEditorPage = currentPageName === "Editor";
 
-  useEffect(() => {
-    const loadArticles = async () => {
-      try {
-        const data = await Article.list("-updated_date");
-        setArticles(data);
-      } catch (error) {
-        console.error("Error loading articles:", error);
-        setArticles([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const loadArticles = async () => {
+    try {
+      const data = await Article.list("-updated_date");
+      setArticles(data || []);
+    } catch (error) {
+      console.error("Error loading articles:", error);
+      setArticles([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     loadArticles();
+
+    // Listen for articlePublished event to refresh articles
+    const handleArticlePublished = () => {
+      loadArticles();
+    };
+    window.addEventListener("articlePublished", handleArticlePublished);
+    return () => {
+      window.removeEventListener("articlePublished", handleArticlePublished);
+    };
   }, []);
 
   const filteredArticles = React.useMemo(() => {

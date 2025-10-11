@@ -1,6 +1,6 @@
-// src/pages/Editor.jsx
 import { useState, useEffect } from "react";
 import { Article } from "@/entities/Article";
+import { Categories } from "@/entities/Categories";
 import { user } from "@/entities/User";
 import { useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -27,8 +27,12 @@ import {
   Image as ImageIcon,
   ArrowLeft,
   Tag,
+  User,
+  MonitorPlay,
 } from "lucide-react";
-
+import ReactMarkdown from "react-markdown";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import FolderStructureEditor from "../components/editor/FolderStructureEditor";
 
 const STATUS_OPTIONS = [
@@ -50,6 +54,7 @@ export default function Editor() {
   const [currentuser, setCurrentuser] = useState(null);
   const [allArticles, setAllArticles] = useState([]);
   const [existingTags, setExistingTags] = useState([]);
+  const [existingCategories, setExistingCategories] = useState([]);
   const [article, setArticles] = useState({
     title: "",
     content: "",
@@ -61,39 +66,12 @@ export default function Editor() {
     attachments: [],
     folder_structure: {},
     created_by: "",
-    categories: [], // New: array of path strings
+    categories: [],
   });
   const [newTag, setNewTag] = useState("");
-  const [categories, setCategories] = useState([
-    { id: crypto.randomUUID(), name: "", subcategories: [] },
-  ]);
 
   const urlParams = new URLSearchParams(window.location.search);
   const editId = urlParams.get("edit");
-
-  const buildTreeFromPaths = (paths) => {
-    const root = [];
-
-    paths.forEach((path) => {
-      const parts = path.split("/").filter(Boolean);
-      let currentLevel = root;
-
-      parts.forEach((part) => {
-        let existingNode = currentLevel.find((node) => node.name === part);
-        if (!existingNode) {
-          existingNode = {
-            id: crypto.randomUUID(),
-            name: part,
-            subcategories: [],
-          };
-          currentLevel.push(existingNode);
-        }
-        currentLevel = existingNode.subcategories;
-      });
-    });
-
-    return root;
-  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -107,25 +85,31 @@ export default function Editor() {
           created_by: me?.id || "",
         }));
 
-        // Load all articles just for existing tags
+        // Load all articles for tags and categories
         const all = await Article.list();
         setAllArticles(all);
         const tags = [...new Set(all.flatMap((a) => a.tags || []))];
         setExistingTags(tags);
 
-        // If editing, fetch just that article
+        // Load categories from backend
+        const categoriesList = await Categories.list();
+        const articleCategories = [
+          ...new Set(
+            all.flatMap((a) => a.categories || (a.category ? [a.category] : []))
+          ),
+        ];
+        const flattenedCategories = flattenCategories(categoriesList);
+        // Combine categories from backend and articles
+        const allCategories = [
+          ...new Set([...flattenedCategories, ...articleCategories]),
+        ];
+        setExistingCategories(allCategories);
+
+        // If editing, fetch the article
         if (editId) {
           const foundArticle = await Article.get(editId);
           if (foundArticle) {
             setArticles(foundArticle);
-            const categoryPaths =
-              foundArticle.categories && foundArticle.categories.length > 0
-                ? foundArticle.categories
-                : foundArticle.category
-                ? [foundArticle.category]
-                : [];
-
-            setCategories(buildTreeFromPaths(categoryPaths));
           }
         }
       } catch (error) {
@@ -136,6 +120,22 @@ export default function Editor() {
 
     loadData();
   }, [editId, navigate]);
+
+  const flattenCategories = (categories, parentPath = "") => {
+    let result = [];
+    categories.forEach((category) => {
+      const currentPath = parentPath
+        ? `${parentPath}/${category.name}`
+        : category.name;
+      result.push(currentPath);
+      if (category.subcategories?.length > 0) {
+        result = result.concat(
+          flattenCategories(category.subcategories, currentPath)
+        );
+      }
+    });
+    return result;
+  };
 
   const addTag = (tagToAdd = newTag.trim()) => {
     if (tagToAdd && !article.tags.includes(tagToAdd)) {
@@ -151,6 +151,22 @@ export default function Editor() {
     setArticles((prev) => ({
       ...prev,
       tags: prev.tags.filter((t) => t !== tagToRemove),
+    }));
+  };
+
+  const setCategory = (category) => {
+    if (category) {
+      setArticles((prev) => ({
+        ...prev,
+        categories: [category], // Only store the selected category
+      }));
+    }
+  };
+
+  const removeCategory = () => {
+    setArticles((prev) => ({
+      ...prev,
+      categories: [],
     }));
   };
 
@@ -172,18 +188,11 @@ export default function Editor() {
     }
   };
 
-  const flattenCategories = (nodes, parentPath = "") => {
-    let result = [];
-    nodes.forEach((node) => {
-      const currentPath = parentPath ? `${parentPath}/${node.name}` : node.name;
-      result.push(currentPath);
-      if (node.subcategories?.length > 0) {
-        result = result.concat(
-          flattenCategories(node.subcategories, currentPath)
-        );
-      }
-    });
-    return result;
+  const removeAttachment = (index) => {
+    setArticles((prev) => ({
+      ...prev,
+      attachments: prev.attachments.filter((_, i) => i !== index),
+    }));
   };
 
   const handleSave = async (status = article.status) => {
@@ -191,16 +200,18 @@ export default function Editor() {
 
     setIsLoading(true);
     try {
-      const saveData = {
-        ...article,
-        status,
-        categories: flattenCategories(categories),
-      };
-
+      const saveData = { ...article, status };
+      let savedArticle;
       if (editId) {
-        await Article.update(editId, saveData);
+        savedArticle = await Article.update(editId, saveData);
       } else {
-        await Article.create(saveData);
+        savedArticle = await Article.create(saveData);
+      }
+      if (status === "published") {
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(
+          new CustomEvent("articlePublished", { detail: savedArticle })
+        );
       }
       navigate(createPageUrl("Dashboard"));
     } catch (error) {
@@ -214,79 +225,11 @@ export default function Editor() {
     setArticles((prev) => ({ ...prev, folder_structure: newStructure }));
   };
 
+  const isPublished = article.status === "published";
+
   if (isLoading && !editId) {
     return <div className="p-8">Loading...</div>;
   }
-
-  const isPublished = article.status === "published";
-
-  const renderCategoryTree = (nodes, parentIndex = null) => {
-    return nodes.map((node, index) => (
-      <div key={node.id} className="ml-4 mt-2">
-        <div className="flex items-center gap-2">
-          <Input
-            value={node.name}
-            onChange={(e) => {
-              const newCats = structuredClone(categories);
-              const updateNode = (list) => {
-                list.forEach((item) => {
-                  if (item.id === node.id) item.name = e.target.value;
-                  else if (item.subcategories) updateNode(item.subcategories);
-                });
-              };
-              updateNode(newCats);
-              setCategories(newCats);
-            }}
-            placeholder="Category name"
-            className="border-slate-300"
-          />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const newCats = structuredClone(categories);
-              const removeNode = (list) => {
-                const idx = list.findIndex((item) => item.id === node.id);
-                if (idx !== -1) list.splice(idx, 1);
-                else list.forEach((item) => removeNode(item.subcategories));
-              };
-              removeNode(newCats);
-              setCategories(newCats);
-            }}
-          >
-            -
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const newCats = structuredClone(categories);
-              const addSub = (list) => {
-                list.forEach((item) => {
-                  if (item.id === node.id) {
-                    item.subcategories.push({
-                      id: crypto.randomUUID(),
-                      name: "",
-                      subcategories: [],
-                    });
-                  } else if (item.subcategories) addSub(item.subcategories);
-                });
-              };
-              addSub(newCats);
-              setCategories(newCats);
-            }}
-          >
-            +
-          </Button>
-        </div>
-        {node.subcategories?.length > 0 && (
-          <div className="ml-6">
-            {renderCategoryTree(node.subcategories, index)}
-          </div>
-        )}
-      </div>
-    ));
-  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -350,7 +293,7 @@ export default function Editor() {
                       }))
                     }
                     placeholder="Enter article title..."
-                    className="mt-1 text-lg font-semibold border-slate-300 focus:border-slate-500"
+                    className="mt-1 border-slate-300 focus:border-slate-500"
                   />
                 </div>
 
@@ -404,25 +347,68 @@ export default function Editor() {
                   />
                 </div>
 
-                <div>
-                  <Label
-                    htmlFor="content"
-                    className="text-sm font-medium text-slate-700"
-                  >
-                    Content
-                  </Label>
-                  <Textarea
-                    id="content"
-                    value={article.content}
-                    onChange={(e) =>
-                      setArticles((prev) => ({
-                        ...prev,
-                        content: e.target.value,
-                      }))
-                    }
-                    placeholder="Write your article content (supports Markdown)..."
-                    className="mt-1 min-h-[300px] border-slate-300 focus:border-slate-500 font-mono text-sm"
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <Label
+                      htmlFor="content"
+                      className="text-sm font-medium text-slate-700"
+                    >
+                      Content
+                    </Label>
+                    <Textarea
+                      id="content"
+                      value={article.content}
+                      onChange={(e) =>
+                        setArticles((prev) => ({
+                          ...prev,
+                          content: e.target.value,
+                        }))
+                      }
+                      placeholder="Write your article content (supports HTML/Markdown)..."
+                      className="mt-1 min-h-[300px] border-slate-300 focus:border-slate-500 font-mono text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-slate-700">
+                      Preview
+                    </Label>
+                    <Card className="mt-1 border-slate-300 min-h-[300px] overflow-auto">
+                      <CardContent className="p-4 prose prose-slate max-w-none">
+                        <ReactMarkdown
+                          components={{
+                            code({
+                              node,
+                              inline,
+                              className,
+                              children,
+                              ...props
+                            }) {
+                              const match = /language-(\w+)/.exec(
+                                className || ""
+                              );
+                              return !inline && match ? (
+                                <SyntaxHighlighter
+                                  style={vscDarkPlus}
+                                  language={match[1]}
+                                  PreTag="div"
+                                  {...props}
+                                >
+                                  {String(children).replace(/\n$/, "")}
+                                </SyntaxHighlighter>
+                              ) : (
+                                <code className={className} {...props}>
+                                  {children}
+                                </code>
+                              );
+                            },
+                          }}
+                        ></ReactMarkdown>
+                        <div
+                          dangerouslySetInnerHTML={{ __html: article.content }}
+                        />
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -554,30 +540,52 @@ export default function Editor() {
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
                   <Tag className="w-5 h-5" />
-                  Categories
+                  Category
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {renderCategoryTree(categories)}
-                  <Button
-                    variant="outline"
-                    onClick={() =>
-                      setCategories([
-                        ...categories,
-                        {
-                          id: crypto.randomUUID(),
-                          name: "",
-                          subcategories: [],
-                        },
-                      ])
-                    }
-                    className="w-full border-slate-300"
+              <CardContent className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">
+                    Select Category
+                  </Label>
+                  <Select
+                    value={article.categories[0] || ""}
+                    onValueChange={setCategory}
                   >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Root Category
-                  </Button>
+                    <SelectTrigger className="mt-1 border-slate-300">
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {existingCategories.map((category, index) => (
+                        <SelectItem key={index} value={category}>
+                          {category}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                {article.categories.length > 0 && (
+                  <div>
+                    <Label className="text-xs font-medium text-slate-500 uppercase tracking-wider">
+                      Selected Category
+                    </Label>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <Badge
+                        variant="secondary"
+                        className="bg-slate-100 text-slate-700 hover:bg-slate-200"
+                      >
+                        {article.categories[0]}
+                        <button
+                          onClick={removeCategory}
+                          className="ml-2 hover:text-red-600"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </Badge>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
 

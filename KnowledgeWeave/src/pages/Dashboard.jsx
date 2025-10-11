@@ -1,32 +1,187 @@
-// src/pages/Dashboard.jsx
 import { useState, useEffect } from "react";
 import { Article } from "@/entities/Article";
+import { Categories } from "@/entities/Categories";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
-import { BookOpen, FileText, Clock, Tag, Eye, Edit3, Plus } from "lucide-react";
+import {
+  BookOpen,
+  FileText,
+  Clock,
+  Tag,
+  Eye,
+  Edit3,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 
 export default function Dashboard() {
   const [articles, setArticles] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
+  const [newCategory, setNewCategory] = useState("");
+  const [newSubcategory, setNewSubcategory] = useState({});
+  const [expandedCategories, setExpandedCategories] = useState(new Set());
 
-  const loadArticles = async () => {
+  const loadData = async () => {
     try {
-      const articlesList = await Article.list(); // await fetch
+      // Load articles
+      const articlesList = await Article.list();
       setArticles(articlesList || []);
+
+      // Load categories from backend
+      let categoriesList = await Categories.list();
+      if (!categoriesList || categoriesList.length === 0) {
+        // Fallback: Derive categories from articles
+        categoriesList = buildCategoryTreeFromArticles(articlesList);
+      }
+      setCategories(categoriesList || []);
     } catch (error) {
-      console.error("Error loading articles:", error);
+      console.error("Error loading data:", error);
       setArticles([]);
+      setCategories([]);
     } finally {
       setIsLoading(false);
     }
   };
+
   useEffect(() => {
-    loadArticles();
+    loadData();
+
+    // Listen for articlePublished event to refresh articles
+    const handleArticlePublished = () => {
+      loadData();
+    };
+    window.addEventListener("articlePublished", handleArticlePublished);
+    return () => {
+      window.removeEventListener("articlePublished", handleArticlePublished);
+    };
   }, []);
+
+  const buildCategoryTreeFromArticles = (articlesList) => {
+    const categoryMap = new Map();
+    articlesList.forEach((article) => {
+      const cats =
+        article.categories ||
+        (article.category ? [article.category] : ["uncategorized"]);
+      cats.forEach((cat) => {
+        const parts = cat.split("/").filter(Boolean);
+        let currentLevel = categoryMap;
+        let currentPath = "";
+        parts.forEach((part, index) => {
+          currentPath = currentPath ? `${currentPath}/${part}` : part;
+          if (!currentLevel.has(part)) {
+            currentLevel.set(part, {
+              id: `${article.id}-${index + 1}`,
+              name: part,
+              subcategories: new Map(),
+              createdAt: article.createdAt,
+            });
+          }
+          currentLevel = currentLevel.get(part).subcategories;
+        });
+      });
+    });
+
+    const convertMapToArray = (map) => {
+      return Array.from(map.values()).map((cat) => ({
+        ...cat,
+        subcategories: convertMapToArray(cat.subcategories),
+      }));
+    };
+
+    return convertMapToArray(categoryMap);
+  };
+
+  const addCategory = async () => {
+    if (!newCategory.trim()) return;
+
+    try {
+      const newCat = {
+        name: newCategory.trim(),
+        subcategories: [],
+      };
+      const savedCategory = await Categories.create(newCat);
+      setCategories((prev) => [...prev, savedCategory]);
+      setNewCategory("");
+    } catch (error) {
+      console.error("Error creating category:", error);
+    }
+  };
+
+  const addSubcategory = async (parentId) => {
+    const subcategoryName = newSubcategory[parentId]?.trim();
+    if (!subcategoryName) return;
+
+    try {
+      const newCats = structuredClone(categories);
+      let parentCategory;
+      const findParent = (nodes) => {
+        for (const node of nodes) {
+          if (node.id === parentId) {
+            parentCategory = node;
+            return true;
+          }
+          if (node.subcategories && findParent(node.subcategories)) return true;
+        }
+        return false;
+      };
+      findParent(newCats);
+
+      if (parentCategory) {
+        parentCategory.subcategories.push({
+          id: Date.now().toString(),
+          name: subcategoryName,
+          subcategories: [],
+          createdAt: new Date().toISOString(),
+        });
+        await Categories.update(parentCategory.id, parentCategory);
+        setCategories(newCats);
+        setNewSubcategory((prev) => ({ ...prev, [parentId]: "" }));
+      }
+    } catch (error) {
+      console.error("Error adding subcategory:", error);
+    }
+  };
+
+  const removeCategory = async (id) => {
+    try {
+      await Categories.delete(id);
+      setCategories((prev) => {
+        const newCats = structuredClone(prev);
+        const removeNode = (nodes) => {
+          const idx = nodes.findIndex((node) => node.id === id);
+          if (idx !== -1) {
+            nodes.splice(idx, 1);
+            return true;
+          }
+          return nodes.some((node) => removeNode(node.subcategories));
+        };
+        removeNode(newCats);
+        return newCats;
+      });
+    } catch (error) {
+      console.error("Error deleting category:", error);
+    }
+  };
+
+  const toggleCategory = (id) => {
+    setExpandedCategories((prev) => {
+      const newExpanded = new Set(prev);
+      if (newExpanded.has(id)) {
+        newExpanded.delete(id);
+      } else {
+        newExpanded.add(id);
+      }
+      return newExpanded;
+    });
+  };
 
   const recentArticles = articles.slice(0, 5);
   const publishedCount = articles.filter(
@@ -53,6 +208,7 @@ export default function Dashboard() {
     projects: "bg-red-100 text-red-800",
     processes: "bg-yellow-100 text-yellow-800",
     uncategorized: "bg-gray-100 text-gray-800",
+    Technology: "bg-teal-100 text-teal-800",
   };
 
   if (isLoading) {
@@ -73,6 +229,68 @@ export default function Dashboard() {
       </div>
     );
   }
+
+  const renderCategoryTree = (nodes, level = 0) => {
+    return nodes.map((node) => (
+      <div key={node.id} className={`ml-${level * 4} mt-2`}>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => toggleCategory(node.id)}
+            className="p-1"
+          >
+            {expandedCategories.has(node.id) ? (
+              <ChevronDown className="w-4 h-4" />
+            ) : (
+              <ChevronRight className="w-4 h-4" />
+            )}
+          </Button>
+          <span className="font-medium text-slate-700 capitalize flex-1">
+            {node.name}
+          </span>
+          <Badge variant="secondary" className="bg-slate-200 text-slate-700">
+            {categoryStats[node.name] || 0}
+          </Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => removeCategory(node.id)}
+            className="text-red-600"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+        {expandedCategories.has(node.id) && (
+          <div className="ml-4 mt-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Input
+                value={newSubcategory[node.id] || ""}
+                onChange={(e) =>
+                  setNewSubcategory((prev) => ({
+                    ...prev,
+                    [node.id]: e.target.value,
+                  }))
+                }
+                placeholder="Add subcategory..."
+                className="border-slate-300"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => addSubcategory(node.id)}
+                disabled={!newSubcategory[node.id]?.trim()}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+            {node.subcategories.length > 0 &&
+              renderCategoryTree(node.subcategories, level + 1)}
+          </div>
+        )}
+      </div>
+    ));
+  };
 
   return (
     <div className="p-6 md:p-8">
@@ -246,25 +464,29 @@ export default function Dashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Object.entries(categoryStats).map(([category, count]) => (
-                  <div
-                    key={category}
-                    className="flex items-center justify-between p-4 bg-slate-50 rounded-lg"
+              <div className="mb-4">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="Add new category..."
+                    className="border-slate-300"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={addCategory}
+                    disabled={!newCategory.trim()}
                   >
-                    <span className="font-medium text-slate-700 capitalize">
-                      {category}
-                    </span>
-                    <Badge
-                      variant="secondary"
-                      className="bg-slate-200 text-slate-700"
-                    >
-                      {count}
-                    </Badge>
-                  </div>
-                ))}
-                {Object.keys(categoryStats).length === 0 && (
-                  <p className="text-slate-500 text-sm text-center py-4 col-span-full">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                {categories.length > 0 ? (
+                  renderCategoryTree(categories)
+                ) : (
+                  <p className="text-slate-500 text-sm text-center py-4">
                     No categories yet
                   </p>
                 )}

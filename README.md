@@ -157,7 +157,7 @@ Start Backend (in backend/):
 - Output: Builds frontend/backend, starts on port 3001.
 
 - Access: `http://localhost:3001`
-- Stop: `Ctrl+C`, then `docker-compose down -v (cleans volumes).`
+- Stop: `Ctrl+C`, then `docker compose down -v (cleans volumes).`
 
 Verify: Logs show `"Server running on port 3001"`. Data persists via mounted JSON volumes.
 

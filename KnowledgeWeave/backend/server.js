@@ -224,15 +224,26 @@ app.post("/api/categories", async (req, res) => {
 app.put("/api/categories/:id", async (req, res) => {
   await categoriesDb.read();
   const id = req.params.id;
-  const index = categoriesDb.data.categories.findIndex((c) => c.id === id);
-  if (index !== -1) {
-    categoriesDb.data.categories[index] = {
-      ...categoriesDb.data.categories[index],
-      ...req.body,
-      updatedAt: new Date().toISOString(),
-    };
+  const updateRecursive = (nodes) => {
+    for (let i = 0; i < nodes.length; i++) {
+      if (nodes[i].id === id) {
+        nodes[i] = {
+          ...nodes[i],
+          ...req.body,
+          updatedAt: new Date().toISOString(),
+        };
+        return true; // stop once found
+      }
+      if (nodes[i].subcategories && updateRecursive(nodes[i].subcategories))
+        return true;
+    }
+    return false;
+  };
+
+  const updated = updateRecursive(categoriesDb.data.categories);
+  if (updated) {
     await categoriesDb.write();
-    res.json(categoriesDb.data.categories[index]);
+    res.json({ success: true });
   } else {
     res.status(404).json({ error: "Category not found" });
   }

@@ -27,6 +27,8 @@ export default function Dashboard() {
   const [categories, setCategories] = useState([]);
   const [newCategory, setNewCategory] = useState("");
   const [newSubcategory, setNewSubcategory] = useState({});
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [editCategoryName, setEditCategoryName] = useState("");
   const [expandedCategories, setExpandedCategories] = useState(new Set());
 
   const loadData = async () => {
@@ -54,13 +56,31 @@ export default function Dashboard() {
   useEffect(() => {
     loadData();
 
-    // Listen for articlePublished event to refresh articles
+    // Refresh when article is published
     const handleArticlePublished = () => {
       loadData();
     };
+
+    // Refresh when article is deleted
+    const handleArticleDeleted = () => {
+      loadData();
+    };
+
+    // Refresh when categories are changed or deleted
+    const handleCategoryUpdate = () => {
+      loadData();
+    };
+
     window.addEventListener("articlePublished", handleArticlePublished);
+    window.addEventListener("articleDeleted", handleArticleDeleted);
+    window.addEventListener("categoryUpdated", handleCategoryUpdate);
+    window.addEventListener("categoryDeleted", handleCategoryUpdate);
+
     return () => {
       window.removeEventListener("articlePublished", handleArticlePublished);
+      window.removeEventListener("articleDeleted", handleArticleDeleted);
+      window.removeEventListener("categoryUpdated", handleCategoryUpdate);
+      window.removeEventListener("categoryDeleted", handleCategoryUpdate);
     };
   }, []);
 
@@ -110,6 +130,7 @@ export default function Dashboard() {
       const savedCategory = await Categories.create(newCat);
       setCategories((prev) => [...prev, savedCategory]);
       setNewCategory("");
+      window.dispatchEvent(new Event("categoryUpdated"));
     } catch (error) {
       console.error("Error creating category:", error);
     }
@@ -145,6 +166,7 @@ export default function Dashboard() {
         setCategories(newCats);
         setNewSubcategory((prev) => ({ ...prev, [parentId]: "" }));
       }
+      window.dispatchEvent(new Event("categoryUpdated"));
     } catch (error) {
       console.error("Error adding subcategory:", error);
     }
@@ -166,8 +188,57 @@ export default function Dashboard() {
         removeNode(newCats);
         return newCats;
       });
+      window.dispatchEvent(new Event("categoryDeleted"));
     } catch (error) {
       console.error("Error deleting category:", error);
+    }
+  };
+
+  const renameCategory = async (id, newName) => {
+    if (!newName.trim()) return;
+
+    try {
+      const newCats = structuredClone(categories);
+      let targetCategory = null;
+      let parentPath = [];
+
+      const findCategory = (nodes, path = []) => {
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i];
+          if (node.id === id) {
+            targetCategory = node;
+            parentPath = [...path, i];
+            return true;
+          }
+          if (node.subcategories && node.subcategories.length > 0) {
+            const found = findCategory(node.subcategories, [
+              ...path,
+              i,
+              "subcategories",
+            ]);
+            if (found) return true;
+          }
+        }
+        return false;
+      };
+
+      const found = findCategory(newCats);
+      if (!found || !targetCategory) {
+        throw new Error(`Category with ID ${id} not found`);
+      }
+
+      targetCategory.name = newName.trim();
+
+      const topLevelCategoryId = newCats[parentPath[0]].id;
+      await Categories.update(topLevelCategoryId, newCats[parentPath[0]]);
+
+      setCategories(newCats);
+      setEditingCategory(null);
+      setEditCategoryName("");
+
+      window.dispatchEvent(new Event("categoryUpdated"));
+    } catch (error) {
+      console.error("Error renaming category:", error.message, error.stack);
     }
   };
 
@@ -181,6 +252,11 @@ export default function Dashboard() {
       }
       return newExpanded;
     });
+  };
+
+  const startEditingCategory = (id, currentName) => {
+    setEditingCategory(id);
+    setEditCategoryName(currentName);
   };
 
   const recentArticles = articles.slice(0, 5);
@@ -246,20 +322,60 @@ export default function Dashboard() {
               <ChevronRight className="w-4 h-4" />
             )}
           </Button>
-          <span className="font-medium text-slate-700 capitalize flex-1">
-            {node.name}
-          </span>
-          <Badge variant="secondary" className="bg-slate-200 text-slate-700">
-            {categoryStats[node.name] || 0}
-          </Badge>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => removeCategory(node.id)}
-            className="text-red-600"
-          >
-            <X className="w-4 h-4" />
-          </Button>
+
+          {editingCategory === node.id ? (
+            <div className="flex items-center gap-2 flex-1">
+              <Input
+                value={editCategoryName}
+                onChange={(e) => setEditCategoryName(e.target.value)}
+                placeholder="New category name"
+                className="border-slate-300"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => renameCategory(node.id, editCategoryName)}
+                disabled={!editCategoryName.trim()}
+              >
+                Save
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingCategory(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+          ) : (
+            <>
+              <span className="font-medium text-slate-700 capitalize flex-1">
+                {node.name}
+              </span>
+              <Badge
+                variant="secondary"
+                className="bg-slate-200 text-slate-700"
+              >
+                {categoryStats[node.name] || 0}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => startEditingCategory(node.id, node.name)}
+                className="text-blue-600"
+              >
+                <Edit3 className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => removeCategory(node.id)}
+                className="text-red-600"
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </>
+          )}
         </div>
         {expandedCategories.has(node.id) && (
           <div className="ml-4 mt-2">

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { Article } from "@/entities/Article";
+import { Categories } from "@/entities/Categories";
 import {
   BookOpen,
   Search,
@@ -39,6 +40,7 @@ export default function Layout({ children, currentPageName }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedFolders, setExpandedFolders] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
 
   // Hide sidebar for editor pages
   const isEditorPage = currentPageName === "Editor";
@@ -55,16 +57,36 @@ export default function Layout({ children, currentPageName }) {
     }
   };
 
+  const loadCategories = async () => {
+    try {
+      const data = await Categories.list();
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Error loading categories:", error);
+      setCategories([]);
+    }
+  };
+
   useEffect(() => {
     loadArticles();
+    loadCategories();
 
-    // Listen for articlePublished event to refresh articles
-    const handleArticlePublished = () => {
+    // refresh when article published or category updated
+    const handleDataChanged = () => {
       loadArticles();
+      loadCategories();
     };
-    window.addEventListener("articlePublished", handleArticlePublished);
+
+    window.addEventListener("articlePublished", handleDataChanged);
+    window.addEventListener("articleDeleted", handleDataChanged);
+    window.addEventListener("categoryUpdated", handleDataChanged);
+    window.addEventListener("categoryDeleted", handleDataChanged);
+
     return () => {
-      window.removeEventListener("articlePublished", handleArticlePublished);
+      window.removeEventListener("articlePublished", handleDataChanged);
+      window.removeEventListener("articleDeleted", handleDataChanged);
+      window.removeEventListener("categoryUpdated", handleDataChanged);
+      window.removeEventListener("categoryDeleted", handleDataChanged);
     };
   }, []);
 
@@ -80,8 +102,54 @@ export default function Layout({ children, currentPageName }) {
     );
   }, [articles, searchTerm]);
 
-  const buildTree = (articlesList) => {
+  useEffect(() => {
+    if (searchTerm) {
+      const allPaths = new Set();
+      filteredArticles.forEach((article) => {
+        (article.categories || []).forEach((cat) => {
+          const parts = cat.split("/");
+          for (let i = 1; i <= parts.length; i++) {
+            allPaths.add(parts.slice(0, i).join("/"));
+          }
+        });
+      });
+      setExpandedFolders(allPaths);
+    } else {
+      setExpandedFolders(new Set());
+    }
+  }, [searchTerm, filteredArticles]);
+
+  const buildTree = (articlesList, categoriesList) => {
     const root = { children: {}, articles: [] };
+
+    // add category path
+    const addCategoryPath = (path) => {
+      let current = root;
+      path
+        .split("/")
+        .filter(Boolean)
+        .forEach((folderName) => {
+          if (!current.children[folderName]) {
+            current.children[folderName] = { children: {}, articles: [] };
+          }
+          current = current.children[folderName];
+        });
+    };
+
+    // add every category (even the empty ones)
+    categoriesList.forEach((cat) => {
+      addCategoryPath(cat.name);
+      const addSubcats = (subcats, basePath) => {
+        subcats?.forEach((sub) => {
+          const subPath = `${basePath}/${sub.name}`;
+          addCategoryPath(subPath);
+          if (sub.subcategories?.length) addSubcats(sub.subcategories, subPath);
+        });
+      };
+      if (cat.subcategories?.length) addSubcats(cat.subcategories, cat.name);
+    });
+
+    // add articles in step 2
     articlesList.forEach((article) => {
       let paths =
         article.categories || (article.category ? [article.category] : []);
@@ -91,14 +159,12 @@ export default function Layout({ children, currentPageName }) {
         }
       } else {
         paths.forEach((path) => {
+          addCategoryPath(path);
           let current = root;
           path
             .split("/")
             .filter(Boolean)
             .forEach((folderName) => {
-              if (!current.children[folderName]) {
-                current.children[folderName] = { children: {}, articles: [] };
-              }
               current = current.children[folderName];
             });
           if (!current.articles.some((a) => a.id === article.id)) {
@@ -107,13 +173,16 @@ export default function Layout({ children, currentPageName }) {
         });
       }
     });
+
     return root;
   };
 
-  const tree = React.useMemo(
-    () => buildTree(filteredArticles),
-    [filteredArticles]
-  );
+  const tree = React.useMemo(() => {
+    if (searchTerm) {
+      return buildTree(filteredArticles, []);
+    }
+    return buildTree(articles, categories);
+  }, [filteredArticles, articles, categories, searchTerm]);
 
   const toggleFolder = (pathString) => {
     setExpandedFolders((prev) => {

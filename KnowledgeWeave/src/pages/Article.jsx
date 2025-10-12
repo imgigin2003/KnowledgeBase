@@ -87,6 +87,7 @@ export default function ArticlePage() {
     setIsDeleting(true);
     try {
       await Article.delete(article.id);
+      window.dispatchEvent(new Event("articleDeleted"));
       navigate(createPageUrl("Dashboard"));
     } catch (e) {
       console.error("Error deleting article:", e);

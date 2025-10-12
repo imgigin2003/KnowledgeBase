@@ -27,10 +27,9 @@ import {
   Image as ImageIcon,
   ArrowLeft,
   Tag,
-  User,
-  MonitorPlay,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
 import FolderStructureEditor from "../components/editor/FolderStructureEditor";
@@ -364,7 +363,7 @@ export default function Editor() {
                           content: e.target.value,
                         }))
                       }
-                      placeholder="Write your article content (supports HTML/Markdown)..."
+                      placeholder="Write your article content (Either with HTML or Markdown)..."
                       className="mt-1 min-h-[300px] border-slate-300 focus:border-slate-500 font-mono text-sm"
                     />
                   </div>
@@ -372,9 +371,14 @@ export default function Editor() {
                     <Label className="text-sm font-medium text-slate-700">
                       Preview
                     </Label>
-                    <Card className="mt-1 border-slate-300 min-h-[300px] overflow-auto">
-                      <CardContent className="p-4 prose prose-slate max-w-none">
+                    <CardContent className="p-4 prose prose-slate max-w-none">
+                      {/<[a-z][\s\S]*>/i.test(article.content) ? (
+                        <div
+                          dangerouslySetInnerHTML={{ __html: article.content }}
+                        />
+                      ) : (
                         <ReactMarkdown
+                          rehypePlugins={[rehypeRaw]}
                           components={{
                             code({
                               node,
@@ -402,12 +406,11 @@ export default function Editor() {
                               );
                             },
                           }}
-                        ></ReactMarkdown>
-                        <div
-                          dangerouslySetInnerHTML={{ __html: article.content }}
-                        />
-                      </CardContent>
-                    </Card>
+                        >
+                          {article.content}
+                        </ReactMarkdown>
+                      )}
+                    </CardContent>
                   </div>
                 </div>
               </CardContent>

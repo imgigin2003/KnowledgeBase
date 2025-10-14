@@ -90,7 +90,12 @@
 
 - json{ "interns": [] }
 
+`categories.json`
+
+- json{ "categories": []}
+
 - Import Existing Data (if you have backups): Copy arrays from your backup JSONs into the files (ensure IDs are strings).
+
 - Check vite.config.js (root): Ensure proxy for API:
   ```jsserver: {
   proxy: {

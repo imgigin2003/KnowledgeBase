@@ -174,20 +174,28 @@ export default function Dashboard() {
 
   const removeCategory = async (id) => {
     try {
-      await Categories.delete(id);
-      setCategories((prev) => {
-        const newCats = structuredClone(prev);
-        const removeNode = (nodes) => {
-          const idx = nodes.findIndex((node) => node.id === id);
-          if (idx !== -1) {
-            nodes.splice(idx, 1);
-            return true;
-          }
-          return nodes.some((node) => removeNode(node.subcategories));
-        };
-        removeNode(newCats);
-        return newCats;
-      });
+      const newCats = structuredClone(categories);
+      let parentCategory = null;
+
+      const removeNode = (nodes, parent = null) => {
+        const idx = nodes.findIndex((node) => node.id === id);
+        if (idx !== -1) {
+          nodes.splice(idx, 1);
+          parentCategory = parent;
+          return true;
+        }
+        return nodes.some((node) => removeNode(node.subcategories, node));
+      };
+
+      removeNode(newCats);
+
+      if (parentCategory) {
+        await Categories.update(parentCategory.id, parentCategory);
+      } else {
+        await Categories.delete(id);
+      }
+
+      setCategories(newCats);
       window.dispatchEvent(new Event("categoryDeleted"));
     } catch (error) {
       console.error("Error deleting category:", error);

@@ -14,7 +14,7 @@
           "title": "Python Mastery",
           "description": "",
           "type": "course",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1758888121271",
@@ -42,14 +42,14 @@
           "title": "Section 7 & 8",
           "description": "Classes & Modules",
           "type": "exercise",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1758888263347",
           "title": "Section 9 ",
           "description": "Python Standard Library ",
           "type": "exercise",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1759253575472",
@@ -145,7 +145,7 @@
           "title": "Section 3 & 4",
           "description": "",
           "type": "exercise",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1758888762142",

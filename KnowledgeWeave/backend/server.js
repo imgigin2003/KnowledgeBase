@@ -1,6 +1,13 @@
-const express = require("express");
-const cors = require("cors");
-const path = require("path");
+import express from "express";
+import cors from "cors";
+import { fileURLToPath } from "url";
+import path from "path";
+import { Low } from "lowdb";
+import { JSONFileSync } from "lowdb/node";
+
+// Emulate __dirname in ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,17 +20,14 @@ const articlesPath = path.join(__dirname, "articles.json");
 const internsPath = path.join(__dirname, "interns.json");
 const categoriesPath = path.join(__dirname, "categories.json");
 
-const { Low } = require("lowdb");
-const { JSONFile } = require("lowdb/node");
-
 // DB Setup
-const articlesAdapter = new JSONFile(articlesPath);
+const articlesAdapter = new JSONFileSync(articlesPath);
 const articlesDb = new Low(articlesAdapter, { articles: [] });
 
-const internsAdapter = new JSONFile(internsPath);
+const internsAdapter = new JSONFileSync(internsPath);
 const internsDb = new Low(internsAdapter, { interns: [] });
 
-const categoriesAdapter = new JSONFile(categoriesPath);
+const categoriesAdapter = new JSONFileSync(categoriesPath);
 const categoriesDb = new Low(categoriesAdapter, { categories: [] });
 
 async function initDB() {
@@ -232,7 +236,7 @@ app.put("/api/categories/:id", async (req, res) => {
           ...req.body,
           updatedAt: new Date().toISOString(),
         };
-        return true; // stop once found
+        return true;
       }
       if (nodes[i].subcategories && updateRecursive(nodes[i].subcategories))
         return true;

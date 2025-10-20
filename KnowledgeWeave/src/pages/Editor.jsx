@@ -108,7 +108,13 @@ export default function Editor() {
         if (editId) {
           const foundArticle = await Article.get(editId);
           if (foundArticle) {
-            setArticles(foundArticle);
+            setArticles({
+              ...foundArticle,
+              categories: foundArticle.categories || [],
+              tags: foundArticle.tags || [],
+              attachments: foundArticle.attachments || [],
+              folder_structure: foundArticle.folder_structure || {},
+            });
           }
         }
       } catch (error) {

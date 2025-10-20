@@ -346,7 +346,7 @@ export default function ArticlePage() {
               {article.updatedAt && article.updatedAt !== article.createdAt && (
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
-                  <span>Updated {safeFormatDate(article.updatedAt)}</span>
+                  <span>Updated: {safeFormatDate(article.updatedAt)}</span>
                 </div>
               )}
             </div>

@@ -19,6 +19,7 @@ app.use(express.json());
 const articlesPath = path.join(__dirname, "articles.json");
 const internsPath = path.join(__dirname, "interns.json");
 const categoriesPath = path.join(__dirname, "categories.json");
+const remindersPath = path.join(__dirname, "reminders.json");
 
 // DB Setup
 const articlesAdapter = new JSONFileSync(articlesPath);
@@ -30,6 +31,9 @@ const internsDb = new Low(internsAdapter, { interns: [] });
 const categoriesAdapter = new JSONFileSync(categoriesPath);
 const categoriesDb = new Low(categoriesAdapter, { categories: [] });
 
+const remindersAdapter = new JSONFileSync(remindersPath);
+const remindersDb = new Low(remindersAdapter, { tasks: [] });
+
 async function initDB() {
   await articlesDb.read();
   articlesDb.data ||= { articles: [] };
@@ -39,6 +43,9 @@ async function initDB() {
 
   await categoriesDb.read();
   categoriesDb.data ||= { categories: [] };
+
+  await remindersDb.read();
+  remindersDb.data ||= { tasks: [] };
 
   // Initialize categories from articles if categories.json is empty
   if (categoriesDb.data.categories.length === 0) {
@@ -261,6 +268,84 @@ app.delete("/api/categories/:id", async (req, res) => {
   );
   await categoriesDb.write();
   res.json({ success: true });
+});
+
+app.get("/api/tasks", async (req, res) => {
+  await remindersDb.read();
+
+  let tasks = remindersDb.data?.tasks || [];
+  const sortBy = req.query._sort;
+  const order = req.query._order === "desc" ? -1 : 1;
+
+  if (sortBy) {
+    tasks.sort((a, b) => {
+      if (a[sortBy] < b[sortBy]) return -1 * order;
+      if (a[sortBy] > b[sortBy]) return 1 * order;
+      return 0;
+    });
+  }
+
+  res.json(tasks);
+});
+
+app.post("/api/tasks", async (req, res) => {
+  await remindersDb.read();
+  const newTask = {
+    id: Date.now().toString(), // Backend generates ID
+    ...req.body,
+    created_date: new Date().toISOString(), // Use created_date for consistency with base44 schema
+    updated_date: new Date().toISOString(),
+  };
+  remindersDb.data.tasks.push(newTask);
+  await remindersDb.write();
+  res.json(newTask);
+});
+
+app.put("/api/tasks/:id", async (req, res) => {
+  await remindersDb.read();
+  const id = req.params.id;
+  const index = remindersDb.data.tasks.findIndex((t) => t.id === id);
+  if (index !== -1) {
+    remindersDb.data.tasks[index] = {
+      ...remindersDb.data.tasks[index],
+      ...req.body,
+      updated_date: new Date().toISOString(), // Update updated_date
+    };
+    await remindersDb.write();
+    res.json(remindersDb.data.tasks[index]);
+  } else {
+    res.status(404).json({ error: "Task not found" });
+  }
+});
+
+app.delete("/api/tasks/:id", async (req, res) => {
+  await remindersDb.read();
+  const id = req.params.id;
+  // Also delete all subtasks recursively
+  const tasksToDelete = new Set([id]);
+  const findChildren = (parentId) => {
+    remindersDb.data.tasks.forEach((task) => {
+      if (task.parent_id === parentId) {
+        tasksToDelete.add(task.id);
+        findChildren(task.id);
+      }
+    });
+  };
+  findChildren(id);
+
+  remindersDb.data.tasks = remindersDb.data.tasks.filter(
+    (t) => !tasksToDelete.has(t.id)
+  );
+  await remindersDb.write();
+  res.json({ success: true });
+});
+
+app.get("/api/tasks/:id", async (req, res) => {
+  await remindersDb.read();
+  const id = req.params.id;
+  const task = remindersDb.data.tasks.find((t) => t.id === id);
+  if (task) res.json(task);
+  else res.status(404).json({ error: "Not found" });
 });
 
 // Serve static Vite build (frontend)

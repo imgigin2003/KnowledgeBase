@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { Article } from "@/entities/Article";
 import { Categories } from "@/entities/Categories";
 import {
-  BookOpen,
+  CheckSquare,
   Search,
   Plus,
   ChevronRight,
@@ -12,8 +12,6 @@ import {
   FileText,
   Folder,
   Home,
-  GraduationCap,
-  Building,
   BrainCircuit,
   ClipboardList,
 } from "lucide-react";
@@ -33,6 +31,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 export default function Layout({ children, currentPageName }) {
   const location = useLocation();
@@ -118,6 +117,8 @@ export default function Layout({ children, currentPageName }) {
       setExpandedFolders(new Set());
     }
   }, [searchTerm, filteredArticles]);
+
+  const queryClient = new QueryClient();
 
   const buildTree = (articlesList, categoriesList) => {
     const root = { children: {}, articles: [] };
@@ -244,126 +245,140 @@ export default function Layout({ children, currentPageName }) {
     return [...folderItems, ...articleItems];
   };
 
-  // If it's an editor page, return children without sidebar
-  if (isEditorPage) {
-    return <div className="min-h-screen bg-slate-50">{children}</div>;
-  }
-
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-slate-50">
-        <Sidebar className="border-r border-slate-200 bg-white">
-          <SidebarHeader className="border-b border-slate-100 p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center">
-                <BrainCircuit className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-slate-900 text-lg">
-                  KnowledgeBase
-                </h2>
-                <p className="text-xs text-slate-500">Internal Documentation</p>
-              </div>
-            </div>
-          </SidebarHeader>
-
-          <SidebarContent className="p-4">
-            <div className="mb-6">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <Input
-                  placeholder="Search articles..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 border-slate-200 focus:border-slate-400"
-                />
-              </div>
-            </div>
-
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-slate-100 transition-colors mb-2 ${
-                        location.pathname === createPageUrl("Dashboard")
-                          ? "bg-slate-100"
-                          : ""
-                      }`}
-                    >
-                      <Link
-                        to={createPageUrl("Dashboard")}
-                        className="flex flex-row items-center gap-2 w-full px-3 py-2"
-                      >
-                        <Home className="w-5 h-5 flex-shrink-0" />
-                        <span className="font-medium whitespace-nowrap">
-                          Dashboard
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      asChild
-                      className={`hover:bg-slate-100 transition-colors mb-2 ${
-                        location.pathname === createPageUrl("InternTracking")
-                          ? "bg-slate-100"
-                          : ""
-                      }`}
-                    >
-                      <Link
-                        to={createPageUrl("InternTracking")}
-                        className="flex flex-row items-center justify-start gap-3 w-full px-3 py-2"
-                      >
-                        <ClipboardList className="w-5 h-5 flex-shrink-0" />
-                        <span className="font-medium whitespace-nowrap">
-                          Intern Tracking
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-
-            <SidebarGroup>
-              <SidebarGroupLabel className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 py-2 mb-3">
-                Knowledge Base
-              </SidebarGroupLabel>
-              <SidebarGroupContent>
-                {isLoading ? (
-                  <div className="px-3 py-4 text-sm text-slate-500">
-                    Loading articles...
+    <QueryClientProvider client={queryClient}>
+      <SidebarProvider>
+        <div className="min-h-screen flex w-full bg-slate-50">
+          {!isEditorPage && (
+            <Sidebar className="border-r border-slate-200 bg-white">
+              <SidebarHeader className="border-b border-slate-100 p-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-slate-600 to-slate-800 rounded-xl flex items-center justify-center">
+                    <BrainCircuit className="w-6 h-6 text-white" />
                   </div>
-                ) : (
-                  <div className="space-y-1">{renderNode(tree)}</div>
-                )}
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-
-          <SidebarFooter className="border-t border-slate-100 p-4">
-            <Link to={createPageUrl("Editor")} className="w-full">
-              <Button className="w-full bg-slate-800 hover:bg-slate-900 text-white">
-                <Plus className="w-4 h-4 mr-2" />
-                New Article
-              </Button>
-            </Link>
-          </SidebarFooter>
-        </Sidebar>
-
-        <main className="flex-1 flex flex-col">
-          <header className="bg-white border-b border-slate-200 px-6 py-4 md:hidden">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors" />
-              <h1 className="text-xl font-semibold">KnowledgeBase</h1>
-            </div>
-          </header>
-
-          <div className="flex-1 overflow-auto bg-slate-50">{children}</div>
-        </main>
-      </div>
-    </SidebarProvider>
+                  <div>
+                    <h2 className="font-bold text-slate-900 text-lg">
+                      KnowledgeBase
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      Internal Documentation
+                    </p>
+                  </div>
+                </div>
+              </SidebarHeader>
+              <SidebarContent className="p-4">
+                <div className="mb-6">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+                    <Input
+                      placeholder="Search articles..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 border-slate-200 focus:border-slate-400"
+                    />
+                  </div>
+                </div>
+                <SidebarGroup>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-slate-100 transition-colors mb-2 ${
+                            location.pathname === createPageUrl("Dashboard")
+                              ? "bg-slate-100"
+                              : ""
+                          }`}
+                        >
+                          <Link
+                            to={createPageUrl("Dashboard")}
+                            className="flex flex-row items-center gap-2 w-full px-3 py-2"
+                          >
+                            <Home className="w-5 h-5 flex-shrink-0" />
+                            <span className="font-medium whitespace-nowrap">
+                              Dashboard
+                            </span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-slate-100 transition-colors mb-2 ${
+                            location.pathname ===
+                            createPageUrl("InternTracking")
+                              ? "bg-slate-100"
+                              : ""
+                          }`}
+                        >
+                          <Link
+                            to={createPageUrl("InternTracking")}
+                            className="flex flex-row items-center justify-start gap-3 w-full px-3 py-2"
+                          >
+                            <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                            <span className="font-medium whitespace-nowrap">
+                              Intern Tracking
+                            </span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                      <SidebarMenuItem>
+                        <SidebarMenuButton
+                          asChild
+                          className={`hover:bg-slate-100 transition-colors mb-2 ${
+                            location.pathname === createPageUrl("TaskManager")
+                              ? "bg-slate-100"
+                              : ""
+                          }`}
+                        >
+                          <Link
+                            to={createPageUrl("TaskManager")}
+                            className="flex items-center gap-3 px-3 py-2"
+                          >
+                            <CheckSquare className="w-4 h-4" />
+                            <span className="font-medium">Task Manager</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+                <SidebarGroup>
+                  <SidebarGroupLabel className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-2 py-2 mb-3">
+                    Knowledge Base
+                  </SidebarGroupLabel>
+                  <SidebarGroupContent>
+                    {isLoading ? (
+                      <div className="px-3 py-4 text-sm text-slate-500">
+                        Loading articles...
+                      </div>
+                    ) : (
+                      <div className="space-y-1">{renderNode(tree)}</div>
+                    )}
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </SidebarContent>
+              <SidebarFooter className="border-t border-slate-100 p-4">
+                <Link to={createPageUrl("Editor")} className="w-full">
+                  <Button className="w-full bg-slate-800 hover:bg-slate-900 text-white">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Article
+                  </Button>
+                </Link>
+              </SidebarFooter>
+            </Sidebar>
+          )}
+          <main className="flex-1 flex flex-col">
+            <header className="bg-white border-b border-slate-200 px-6 py-4 md:hidden">
+              <div className="flex items-center gap-4">
+                <SidebarTrigger className="hover:bg-slate-100 p-2 rounded-lg transition-colors" />
+                <h1 className="text-xl font-semibold">KnowledgeBase</h1>
+              </div>
+            </header>
+            <div className="flex-1 overflow-auto bg-slate-50">{children}</div>
+          </main>
+        </div>
+      </SidebarProvider>
+    </QueryClientProvider>
   );
 }

@@ -1,0 +1,66 @@
+{
+  "name": "Task",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Task name"
+    },
+    "description": {
+      "type": "string",
+      "description": "Detailed task description"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high"],
+      "default": "medium",
+      "description": "Task priority level"
+    },
+    "deadline": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Task deadline"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "created",
+        "started",
+        "in_progress",
+        "paused",
+        "done",
+        "completed",
+        "archived"
+      ],
+      "default": "created",
+      "description": "Task status"
+    },
+    "color": {
+      "type": "string",
+      "enum": [
+        "red",
+        "orange",
+        "yellow",
+        "green",
+        "blue",
+        "purple",
+        "pink",
+        "gray"
+      ],
+      "default": "blue",
+      "description": "Task color for visual grouping"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Task tags"
+    },
+    "parent_id": {
+      "type": "string",
+      "description": "Parent task ID for nesting"
+    }
+  },
+  "required": ["name"]
+}

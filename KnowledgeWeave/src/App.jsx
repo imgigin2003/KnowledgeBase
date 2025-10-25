@@ -1,27 +1,21 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import { createPageUrl } from "./utils"; // Adjusted import for utils
+import { createPageUrl } from "./utils";
 
 import Layout from "./Layout";
 import Dashboard from "./pages/Dashboard";
 import Editor from "./pages/Editor";
-import ArticlePage from "./pages/Article"; // Renamed to avoid conflict with entity
+import ArticlePage from "./pages/Article";
 import InternTracking from "./pages/InternTracking";
-import ExportData from "./pages/ExportData"; // New page for data export
+import TaskManager from "./pages/TaskManager";
 
 function App() {
   return (
     <Router>
       <Routes>
-        {/*
-          The Layout component receives `children` prop which will be the matched Route component.
-          The `currentPageName` prop is manually passed to the Layout based on the route.
-        */}
         <Route path="/" element={<Layout currentPageName="Dashboard" />}>
           {/* Index route for the root path */}
           <Route index element={<Dashboard />} />
         </Route>
-
-        {/* Separate routes for other pages, also wrapped by Layout */}
         <Route
           path={createPageUrl("Dashboard")}
           element={
@@ -55,16 +49,13 @@ function App() {
           }
         />
         <Route
-          path={createPageUrl("ExportData")}
+          path={createPageUrl("TaskManager")}
           element={
-            <Layout currentPageName="ExportData">
-              <ExportData />
+            <Layout currentPageName="TaskManager">
+              <TaskManager />
             </Layout>
           }
         />
-
-        {/* You can add a 404 Not Found page here if desired */}
-        {/* <Route path="*" element={<Layout><NotFoundPage /></Layout>} /> */}
       </Routes>
     </Router>
   );

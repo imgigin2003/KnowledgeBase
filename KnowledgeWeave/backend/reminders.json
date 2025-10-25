@@ -1,0 +1,75 @@
+{
+  "tasks": [
+    {
+      "id": "1761401939372",
+      "name": "grocery",
+      "description": "",
+      "priority": "high",
+      "deadline": "2025-10-25T17:48",
+      "status": "created",
+      "color": "purple",
+      "tags": [],
+      "parent_id": null,
+      "created_date": "2025-10-25T14:18:59.372Z",
+      "updated_date": "2025-10-25T14:19:30.235Z",
+      "children": [
+        {
+          "id": "1761401961712",
+          "name": "kiwi",
+          "description": "",
+          "priority": "medium",
+          "deadline": "",
+          "status": "completed",
+          "color": "green",
+          "tags": [],
+          "parent_id": "1761401939372",
+          "created_date": "2025-10-25T14:19:21.712Z",
+          "updated_date": "2025-10-25T14:19:26.645Z",
+          "children": []
+        },
+        {
+          "id": "1761401949886",
+          "name": "banana",
+          "description": "",
+          "priority": "high",
+          "deadline": "",
+          "status": "completed",
+          "color": "yellow",
+          "tags": [],
+          "parent_id": "1761401939372",
+          "created_date": "2025-10-25T14:19:09.886Z",
+          "updated_date": "2025-10-25T14:19:27.609Z",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "1761401949886",
+      "name": "banana",
+      "description": "",
+      "priority": "high",
+      "deadline": "",
+      "status": "created",
+      "color": "yellow",
+      "tags": [],
+      "parent_id": "1761401939372",
+      "created_date": "2025-10-25T14:19:09.886Z",
+      "updated_date": "2025-10-25T14:19:32.780Z",
+      "children": []
+    },
+    {
+      "id": "1761401961712",
+      "name": "kiwi",
+      "description": "",
+      "priority": "medium",
+      "deadline": "",
+      "status": "created",
+      "color": "green",
+      "tags": [],
+      "parent_id": "1761401939372",
+      "created_date": "2025-10-25T14:19:21.712Z",
+      "updated_date": "2025-10-25T14:19:31.633Z",
+      "children": []
+    }
+  ]
+}

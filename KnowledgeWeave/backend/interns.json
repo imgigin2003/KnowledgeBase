@@ -6,7 +6,7 @@
       "email": "-",
       "start_date": "2025-09-01",
       "program": "Rust Expert / Python Beginner",
-      "mentor": "Mosh Hamedani",
+      "mentor": "Negin Parseh",
       "status": "active",
       "requirements": [
         {
@@ -57,6 +57,48 @@
           "description": "",
           "type": "project",
           "completed": false
+        },
+        {
+          "id": "1760947126412",
+          "title": "JS Course (Part 1)",
+          "description": "",
+          "type": "course",
+          "completed": false
+        },
+        {
+          "id": "1761401156685",
+          "title": "Section 1 & 2",
+          "description": "",
+          "type": "exercise",
+          "completed": true
+        },
+        {
+          "id": "1761401176660",
+          "title": "Section 3 & 4",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1761401185245",
+          "title": "Section 5 & 6",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1761401239585",
+          "title": "Section 7",
+          "description": "",
+          "type": "exercise",
+          "completed": false
+        },
+        {
+          "id": "1761401253852",
+          "title": "Final Project",
+          "description": "",
+          "type": "project",
+          "completed": false
         }
       ],
       "notes": "has experience in rust, codes clean and organized",
@@ -68,7 +110,7 @@
       "email": "Narjes.Abaeijabri@yahoo.com",
       "start_date": "2025-09-15",
       "program": "Bio Informatic Expert / Python Beginner",
-      "mentor": "Mosh Hamedani",
+      "mentor": "Negin Parseh",
       "status": "active",
       "requirements": [
         {
@@ -123,7 +165,7 @@
       "email": "-",
       "start_date": "2025-09-26",
       "program": "Regular Intern",
-      "mentor": "Jayson Lennon",
+      "mentor": "Negin Parseh",
       "status": "active",
       "requirements": [
         {
@@ -192,7 +234,7 @@
       "email": "-",
       "start_date": "2025-09-30",
       "program": "Python Beginner",
-      "mentor": "Mosh Hamedani",
+      "mentor": "Negin Parseh",
       "status": "active",
       "requirements": [
         {

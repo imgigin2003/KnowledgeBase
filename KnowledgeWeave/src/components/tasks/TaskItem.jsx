@@ -189,7 +189,7 @@ export default function TaskItem({
                     className="flex items-center gap-1 text-xs px-1.5 py-0"
                   >
                     <Calendar className="w-3 h-3" />
-                    {format(new Date(task.deadline), "MMM d")}
+                    {format(new Date(task.deadline), "MMM d, HH:mm")}{" "}
                   </Badge>
                 )}
 

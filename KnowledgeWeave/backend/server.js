@@ -164,6 +164,68 @@ app.post("/api/articles/:id/comments", async (req, res) => {
   res.json(articlesDb.data.articles[articleIndex]);
 });
 
+app.put("/api/articles/:articleId/comments/:commentId", async (req, res) => {
+  await articlesDb.read();
+  const articleId = req.params.articleId;
+  const commentId = req.params.commentId;
+  const articleIndex = articlesDb.data.articles.findIndex(
+    (a) => a.id === articleId
+  );
+
+  if (articleIndex === -1)
+    return res.status(404).json({ error: "Article not found" });
+
+  const comments = articlesDb.data.articles[articleIndex].comments;
+  if (!comments)
+    return res.status(404).json({ error: "Comments not found for article" });
+
+  const commentIndex = comments.findIndex((c) => c.id === commentId);
+
+  if (commentIndex === -1)
+    return res.status(404).json({ error: "Comment not found" });
+
+  const updatedComment = {
+    ...comments[commentIndex],
+    ...req.body,
+    updatedAt: new Date().toISOString(),
+  };
+
+  articlesDb.data.articles[articleIndex].comments[commentIndex] =
+    updatedComment;
+  await articlesDb.write();
+  res.json(updatedComment);
+});
+
+app.delete("/api/articles/:articleId/comments/:commentId", async (req, res) => {
+  await articlesDb.read();
+  const articleId = req.params.articleId;
+  const commentId = req.params.commentId;
+  const articleIndex = articlesDb.data.articles.findIndex(
+    (a) => a.id === articleId
+  );
+
+  if (articleIndex === -1)
+    return res.status(404).json({ error: "Article not found" });
+
+  let comments = articlesDb.data.articles[articleIndex].comments;
+  if (!comments)
+    return res.status(404).json({ error: "Comments not found for article" });
+
+  const initialLength = comments.length;
+  articlesDb.data.articles[articleIndex].comments = comments.filter(
+    (c) => c.id !== commentId
+  );
+
+  if (
+    articlesDb.data.articles[articleIndex].comments.length === initialLength
+  ) {
+    return res.status(404).json({ error: "Comment not found" });
+  }
+
+  await articlesDb.write();
+  res.json({ success: true });
+});
+
 // API Routes for Interns
 app.get("/api/interns", async (req, res) => {
   await internsDb.read();

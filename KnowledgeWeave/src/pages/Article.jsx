@@ -5,7 +5,7 @@ import { createPageUrl } from "@/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CommentForm } from "@/components/ui/comment-form";
-import { CommentList } from "@/components/ui/comment-list";
+import { CommentList } from "@/components/ui/comment-list"; // Ensure this import is correct
 import { Card, CardContent } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
@@ -66,6 +66,7 @@ export default function ArticlePage() {
         const foundArticle = await Article.get(id);
         if (foundArticle) {
           setArticles(foundArticle);
+          // Ensure comments array exists, otherwise default to empty
           setComments(foundArticle.comments || []);
         } else {
           navigate(createPageUrl("Dashboard"));
@@ -108,6 +109,38 @@ export default function ArticlePage() {
       setCommentError("Failed to Post Comment... Try again.");
     } finally {
       setIsSubmittingComment(false);
+    }
+  };
+
+  // NEW: Handle comment update
+  const handleUpdateComment = async (commentId, updatedData) => {
+    try {
+      const updatedComment = await Article.updateComment(
+        article.id,
+        commentId,
+        updatedData
+      );
+      setComments((prevComments) =>
+        prevComments.map((comment) =>
+          comment.id === commentId ? { ...comment, ...updatedComment } : comment
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update comment:", error);
+      // Optionally set an error state here for the user
+    }
+  };
+
+  // NEW: Handle comment delete
+  const handleDeleteComment = async (commentId) => {
+    try {
+      await Article.deleteComment(article.id, commentId);
+      setComments((prevComments) =>
+        prevComments.filter((comment) => comment.id !== commentId)
+      );
+    } catch (error) {
+      console.error("Failed to delete comment:", error);
+      // Optionally set an error state here for the user
     }
   };
 
@@ -161,15 +194,10 @@ export default function ArticlePage() {
     return categoryColors[keys[randomIndex]] || "bg-gray-400";
   };
 
-  const categoryValue =
-    article?.category ||
-    (Array.isArray(article?.categories)
-      ? article.categories[0]
-      : article?.categories) ||
-    "";
+  const categoryValue = article?.categories?.[0] || article?.category || "";
 
   const parentCategory = categoryValue?.split("/")?.[0] || "";
-  console.log("Parent category:", parentCategory);
+  // console.log("Parent category:", parentCategory); // This log is fine here
 
   const renderStructure = (struct, path = []) => {
     const items = [];
@@ -259,7 +287,7 @@ export default function ArticlePage() {
           <Link to={createPageUrl(`Editor?edit=${article.id}`)}>
             <Button variant="outline">
               <Edit3 className="w-4 h-4 mr-2" />
-              Edit
+              Edit Article
             </Button>
           </Link>
           <AlertDialog>
@@ -404,7 +432,7 @@ export default function ArticlePage() {
                   <div>
                     <p className="font-medium">{attachment.name}</p>
                     <a
-                      href={attachment.url}
+                      href__={attachment.url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-blue-600 hover:underline text-sm"
@@ -436,14 +464,18 @@ export default function ArticlePage() {
 
       {/* Only display when article is published */}
       {article.status === "published" && (
-        <Card ref={commentsRef}>
+        <Card ref__={commentsRef}>
           {" "}
           {/* ref رو اینجا اضافه کن */}
           <CardContent className="p-6 space-y-6">
             <h3 className="text-lg font-semibold flex items-center gap-2 text-slate-900">
               <User className="w-5 h-5" /> Comments ({comments.length})
             </h3>
-            <CommentList comments={comments} />
+            <CommentList
+              comments={comments}
+              onUpdateComment={handleUpdateComment}
+              onDeleteComment={handleDeleteComment}
+            />
             <CommentForm
               onSubmit={handleAddComment}
               isSubmitting={isSubmittingComment}

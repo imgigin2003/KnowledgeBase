@@ -49,6 +49,28 @@ export const Article = {
     if (!res.ok) throw new Error("Failed to add comment");
     return res.json();
   },
+  updateComment: async (articleId, commentId, commentData) => {
+    const res = await fetch(
+      `${API_BASE}/articles/${articleId}/comments/${commentId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(commentData),
+      }
+    );
+    if (!res.ok) throw new Error("Failed to update comment");
+    return res.json();
+  },
+  deleteComment: async (articleId, commentId) => {
+    const res = await fetch(
+      `${API_BASE}/articles/${articleId}/comments/${commentId}`,
+      {
+        method: "DELETE",
+      }
+    );
+    if (!res.ok) throw new Error("Failed to delete comment");
+    return { success: true };
+  },
 };
 
 export default Article;

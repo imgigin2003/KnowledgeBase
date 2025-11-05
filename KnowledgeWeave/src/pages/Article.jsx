@@ -10,6 +10,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
 import rehypeHighlight from "rehype-highlight";
+import rehypeSlug from "rehype-slug";
+import rehypeAutolinkHeadings from "rehype-autolink-headings";
 import "highlight.js/styles/github.css";
 import {
   ArrowLeft,
@@ -382,7 +384,20 @@ export default function ArticlePage() {
             {/* Content */}
             <Card>
               <CardContent className="p-6 prose prose-slate max-w-none">
-                <ReactMarkdown rehypePlugins={[rehypeRaw, rehypeHighlight]}>
+                <ReactMarkdown
+                  rehypePlugins={[
+                    rehypeRaw,
+                    rehypeHighlight,
+                    rehypeSlug,
+                    [
+                      rehypeAutolinkHeadings,
+                      {
+                        behavior: "append",
+                        properties: { className: ["anchor-link"] },
+                      },
+                    ],
+                  ]}
+                >
                   {article.content || ""}
                 </ReactMarkdown>
               </CardContent>

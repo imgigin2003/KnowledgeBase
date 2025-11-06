@@ -8,14 +8,15 @@
     "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --detectOpenHandles --forceExit"
   },
   "dependencies": {
-    "express": "5.1.0",
     "cors": "^2.8.5",
-    "lowdb": "^7.0.1"
+    "express": "5.1.0",
+    "lowdb": "^7.0.1",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
-    "jest": "^29.7.0",
-    "supertest": "^6.3.3",
+    "cross-env": "^7.0.3",
     "fs-extra": "^11.1.1",
-    "cross-env": "^7.0.3"
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
   }
 }

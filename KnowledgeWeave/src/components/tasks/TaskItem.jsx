@@ -73,7 +73,6 @@ export default function TaskItem({
   const hasChildren = task.children && task.children.length > 0;
   const isCompleted = task.status === "completed" || task.status === "done";
 
-  // Calculate completion progress
   const calculateProgress = (taskId) => {
     const getAllDescendants = (id) => {
       const children = allTasks.filter((t) => t.parent_id === id);
@@ -85,7 +84,6 @@ export default function TaskItem({
 
     const descendants = getAllDescendants(taskId);
     if (descendants.length === 0) {
-      // No children, so progress is based on own completion
       return isCompleted ? 100 : 0;
     }
 
@@ -112,14 +110,12 @@ export default function TaskItem({
   return (
     <div className="select-none">
       <div className="flex items-start gap-2 p-2 hover:bg-slate-50 rounded group">
-        {/* Checkbox */}
         <Checkbox
           checked={isCompleted}
           onCheckedChange={handleCheckboxChange}
           className="mt-1 flex-shrink-0"
         />
 
-        {/* Expand/Collapse Button */}
         {hasChildren ? (
           <button
             onClick={() => onToggleExpand(task.id)}
@@ -135,12 +131,10 @@ export default function TaskItem({
           <div className="w-6 flex-shrink-0"></div>
         )}
 
-        {/* Color Indicator */}
         <div
           className={`w-1 h-6 ${colorClass} rounded-full flex-shrink-0 mt-1`}
         ></div>
 
-        {/* Task Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -189,7 +183,7 @@ export default function TaskItem({
                     className="flex items-center gap-1 text-xs px-1.5 py-0"
                   >
                     <Calendar className="w-3 h-3" />
-                    {format(new Date(task.deadline), "MMM d, HH:mm")}{" "}
+                    {format(new Date(task.deadline), "MMM d, HH:mm")}
                   </Badge>
                 )}
 
@@ -230,7 +224,6 @@ export default function TaskItem({
               )}
             </div>
 
-            {/* Actions */}
             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
               <Button
                 variant="ghost"

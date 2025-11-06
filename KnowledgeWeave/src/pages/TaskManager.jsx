@@ -1,10 +1,24 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Task } from "@/entities/Task";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, CheckSquare, Search } from "lucide-react";
+import {
+  Plus,
+  CheckSquare,
+  Search,
+  FileText,
+  Upload,
+  ChevronDown,
+} from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 import TaskTree from "../components/tasks/TaskTree";
 import TaskEditor from "../components/tasks/TaskEditor";
@@ -20,46 +34,61 @@ export default function TaskManager() {
     color: "all",
     tags: [],
   });
+  const [selectedFile, setSelectedFile] = useState("reminders.json");
+  const [taskFiles, setTaskFiles] = useState(["reminders.json"]);
+  const fileInputRef = useRef(null);
 
   const queryClient = useQueryClient();
 
-  // Use the new Task entity for fetching
+  // Fetch available task files
+  useEffect(() => {
+    const loadTaskFiles = async () => {
+      try {
+        const files = await Task.getTaskFiles();
+        setTaskFiles(files);
+      } catch (error) {
+        console.error("Error loading task files:", error);
+      }
+    };
+    loadTaskFiles();
+  }, []);
+
+  // Fetch tasks from selected file
   const { data: tasks = [], isLoading } = useQuery({
-    queryKey: ["tasks"],
-    queryFn: () => Task.list("-created_date"), // Now calls your backend API
+    queryKey: ["tasks", selectedFile],
+    queryFn: () => Task.list("-created_date", selectedFile),
     initialData: [],
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: (taskData) => Task.create(taskData),
+    mutationFn: (taskData) => Task.create(taskData, selectedFile),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.refetchQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", selectedFile] });
+      queryClient.refetchQueries({ queryKey: ["tasks", selectedFile] });
       setShowEditor(false);
       setEditingTask(null);
     },
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: ({ id, taskData }) => Task.update(id, taskData),
+    mutationFn: ({ id, taskData }) => Task.update(id, taskData, selectedFile),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.refetchQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", selectedFile] });
+      queryClient.refetchQueries({ queryKey: ["tasks", selectedFile] });
       setShowEditor(false);
       setEditingTask(null);
     },
   });
 
   const deleteTaskMutation = useMutation({
-    mutationFn: (id) => Task.delete(id),
+    mutationFn: (id) => Task.delete(id, selectedFile),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      queryClient.refetchQueries({ queryKey: ["tasks"] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", selectedFile] });
+      queryClient.refetchQueries({ queryKey: ["tasks", selectedFile] });
     },
   });
 
   const handleSaveTask = (taskData) => {
-    // Backend now handles ID generation
     if (editingTask && editingTask.id) {
       updateTaskMutation.mutate({ id: editingTask.id, taskData });
     } else {
@@ -73,7 +102,6 @@ export default function TaskManager() {
   };
 
   const handleDeleteTask = async (taskId) => {
-    // The backend will handle recursive deletion of subtasks
     await deleteTaskMutation.mutateAsync(taskId);
   };
 
@@ -89,16 +117,38 @@ export default function TaskManager() {
       parent_id: parentTask.id,
       name: "",
       description: "",
-      priority: parentTask.priority || "medium", // Use parent's priority or default
+      priority: parentTask.priority || "medium",
       status: "created",
-      color: parentTask.color || "blue", // Use parent's color or default
+      color: parentTask.color || "blue",
       tags: [],
       deadline: "",
     });
     setShowEditor(true);
   };
 
-  // Build tree structure
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const result = await Task.uploadTaskFile(file);
+      setTaskFiles((prev) => [...prev, result.filename]);
+      setSelectedFile(result.filename);
+      queryClient.invalidateQueries({ queryKey: ["tasks", result.filename] });
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      alert(
+        error.message ||
+          "Failed to upload file. Please ensure it's a valid JSON file with tasks array."
+      );
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
   const buildTree = (tasks, parentId = null) => {
     return tasks
       .filter((task) => task.parent_id === parentId)
@@ -108,7 +158,6 @@ export default function TaskManager() {
       }));
   };
 
-  // Filter tasks
   const filterTasks = (tasks) => {
     return tasks.filter((task) => {
       const matchesSearch =
@@ -138,8 +187,6 @@ export default function TaskManager() {
 
   const filteredTasks = filterTasks(tasks);
   const taskTree = buildTree(filteredTasks);
-
-  // Get all unique tags
   const allTags = [...new Set(tasks.flatMap((t) => t.tags || []))];
 
   if (isLoading) {
@@ -174,16 +221,55 @@ export default function TaskManager() {
               Organize tasks with unlimited nested subtasks
             </p>
           </div>
-          <Button
-            onClick={() => {
-              setEditingTask(null);
-              setShowEditor(true);
-            }}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Task
-          </Button>
+          <div className="flex items-center gap-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <FileText className="w-4 h-4" />
+                  <span className="max-w-[150px] truncate">{selectedFile}</span>
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                {taskFiles.map((file) => (
+                  <DropdownMenuItem
+                    key={file}
+                    onClick={() => setSelectedFile(file)}
+                    className={selectedFile === file ? "bg-slate-100" : ""}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    <span className="truncate">{file}</span>
+                  </DropdownMenuItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  onClick={() => fileInputRef.current?.click()}
+                  className="text-blue-600"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload JSON File
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json, application/json"
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+
+            <Button
+              onClick={() => {
+                setEditingTask(null);
+                setShowEditor(true);
+              }}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              New Task
+            </Button>
+          </div>
         </div>
 
         <Card className="border-slate-200">
@@ -234,7 +320,7 @@ export default function TaskManager() {
             <CardContent className="p-4">
               <TaskTree
                 tasks={taskTree}
-                allTasks={tasks} // Pass allTasks for progress calculation
+                allTasks={tasks}
                 onEdit={handleEditTask}
                 onDelete={handleDeleteTask}
                 onStatusChange={handleStatusChange}

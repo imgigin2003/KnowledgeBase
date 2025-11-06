@@ -4,8 +4,9 @@ import { fileURLToPath } from "url";
 import path from "path";
 import { Low } from "lowdb";
 import { JSONFileSync } from "lowdb/node";
+import fs from "fs";
+import multer from "multer";
 
-// Emulate __dirname in ESM
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -15,13 +16,30 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
-// Paths to JSON files in backend
+// task-files directory (all JSON task files live here)
+const taskDataDir = path.join(__dirname, "task-files");
+if (!fs.existsSync(taskDataDir)) {
+  fs.mkdirSync(taskDataDir, { recursive: true });
+}
+
+// Multer: save directly into task-files (no subfolder)
+const upload = multer({
+  dest: taskDataDir,
+  fileFilter: (req, file, cb) => {
+    if (path.extname(file.originalname).toLowerCase() !== ".json") {
+      return cb(new Error("Only .json files allowed"));
+    }
+    cb(null, true);
+  },
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+});
+
+// DB setup
 const articlesPath = path.join(__dirname, "articles.json");
 const internsPath = path.join(__dirname, "interns.json");
 const categoriesPath = path.join(__dirname, "categories.json");
-const remindersPath = path.join(__dirname, "reminders.json");
+const remindersPath = path.join(taskDataDir, "reminders.json");
 
-// DB Setup
 const articlesAdapter = new JSONFileSync(articlesPath);
 const articlesDb = new Low(articlesAdapter, { articles: [] });
 
@@ -34,272 +52,367 @@ const categoriesDb = new Low(categoriesAdapter, { categories: [] });
 const remindersAdapter = new JSONFileSync(remindersPath);
 const remindersDb = new Low(remindersAdapter, { tasks: [] });
 
+const taskDatabases = new Map();
+
+function getTaskDb(filename) {
+  if (!taskDatabases.has(filename)) {
+    const filePath = path.join(taskDataDir, filename);
+    const adapter = new JSONFileSync(filePath);
+    const db = new Low(adapter, { tasks: [] });
+    taskDatabases.set(filename, db);
+  }
+  return taskDatabases.get(filename);
+}
+
 async function initDB() {
   await articlesDb.read();
   articlesDb.data ||= { articles: [] };
-
   await internsDb.read();
   internsDb.data ||= { interns: [] };
-
   await categoriesDb.read();
   categoriesDb.data ||= { categories: [] };
-
   await remindersDb.read();
   remindersDb.data ||= { tasks: [] };
 
-  // Initialize categories from articles if categories.json is empty
+  // Populate categories from articles if empty
   if (categoriesDb.data.categories.length === 0) {
     const categoryMap = new Map();
     articlesDb.data.articles.forEach((article) => {
       (article.categories || [article.category || "uncategorized"]).forEach(
         (cat) => {
           const parts = cat.split("/").filter(Boolean);
-          let currentLevel = categoryMap;
-          let currentPath = "";
-
-          parts.forEach((part, index) => {
-            currentPath = currentPath ? `${currentPath}/${part}` : part;
-            if (!currentLevel.has(part)) {
-              const category = {
-                id: `${article.id}-${index + 1}`,
+          let level = categoryMap;
+          parts.forEach((part, i) => {
+            if (!level.has(part)) {
+              level.set(part, {
+                id: `${article.id}-${i + 1}`,
                 name: part,
                 subcategories: new Map(),
                 createdAt: article.createdAt,
-              };
-              currentLevel.set(part, category);
+              });
             }
-            currentLevel = currentLevel.get(part).subcategories;
+            level = level.get(part).subcategories;
           });
         }
       );
     });
 
-    // Convert Map to array
-    const convertMapToArray = (map) => {
-      return Array.from(map.values()).map((cat) => ({
-        ...cat,
-        subcategories: convertMapToArray(cat.subcategories),
+    const toArray = (map) =>
+      Array.from(map.values()).map((c) => ({
+        ...c,
+        subcategories: toArray(c.subcategories),
       }));
-    };
 
-    categoriesDb.data.categories = convertMapToArray(categoryMap);
+    categoriesDb.data.categories = toArray(categoryMap);
     await categoriesDb.write();
   }
 }
 
-// API Routes for Articles
-app.get("/api/articles", async (req, res) => {
-  await articlesDb.read();
-  res.json(articlesDb.data?.articles || []);
+/* -------------------------------------------------------------------------- */
+/*                               TASK FILE UPLOAD                             */
+/* -------------------------------------------------------------------------- */
+app.post("/api/task-files/upload", upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+
+    const tempPath = req.file.path;
+    const originalName = req.file.originalname;
+
+    // Validate JSON
+    let jsonData;
+    try {
+      jsonData = JSON.parse(fs.readFileSync(tempPath, "utf-8"));
+    } catch {
+      fs.unlinkSync(tempPath);
+      return res.status(400).json({ error: "Invalid JSON file" });
+    }
+
+    if (!jsonData.tasks || !Array.isArray(jsonData.tasks)) {
+      fs.unlinkSync(tempPath);
+      return res.status(400).json({ error: "Expected { tasks: [] }" });
+    }
+
+    // Final filename (handle duplicates)
+    let finalName = originalName;
+    let finalPath = path.join(taskDataDir, finalName);
+    if (fs.existsSync(finalPath)) {
+      const parsed = path.parse(originalName);
+      finalName = `${parsed.name}-${Date.now()}${parsed.ext}`;
+      finalPath = path.join(taskDataDir, finalName);
+    }
+
+    // Move/rename to final location
+    if (tempPath !== finalPath) {
+      fs.renameSync(tempPath, finalPath);
+    }
+
+    res.json({ filename: finalName, success: true });
+  } catch (err) {
+    console.error("Upload error:", err);
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ error: err.message || "Upload failed" });
+  }
 });
 
+/* -------------------------------------------------------------------------- */
+/*                               LIST TASK FILES                              */
+/* -------------------------------------------------------------------------- */
+app.get("/api/task-files", (req, res) => {
+  try {
+    const files = fs.readdirSync(taskDataDir);
+    const jsonFiles = files.filter((f) => f.endsWith(".json"));
+    res.json(jsonFiles);
+  } catch {
+    res.status(500).json({ error: "Failed to read task files" });
+  }
+});
+
+/* -------------------------------------------------------------------------- */
+/*                                   TASK CRUD                                */
+/* -------------------------------------------------------------------------- */
+app.get("/api/tasks", async (req, res) => {
+  const filename = req.query.file || "reminders.json";
+  const db = getTaskDb(filename);
+  try {
+    await db.read();
+    let tasks = db.data?.tasks || [];
+    const sort = req.query._sort;
+    const order = req.query._order === "desc" ? -1 : 1;
+    if (sort) {
+      tasks.sort((a, b) =>
+        a[sort] < b[sort] ? -order : a[sort] > b[sort] ? order : 0
+      );
+    }
+    res.json(tasks);
+  } catch {
+    res.status(500).json({ error: "Failed to read tasks" });
+  }
+});
+
+app.post("/api/tasks", async (req, res) => {
+  const filename = req.query.file || "reminders.json";
+  const db = getTaskDb(filename);
+  try {
+    await db.read();
+    const task = {
+      id: Date.now().toString(),
+      ...req.body,
+      created_date: new Date().toISOString(),
+      updated_date: new Date().toISOString(),
+    };
+    db.data.tasks = db.data.tasks || [];
+    db.data.tasks.push(task);
+    await db.write();
+    res.json(task);
+  } catch {
+    res.status(500).json({ error: "Failed to create task" });
+  }
+});
+
+app.put("/api/tasks/:id", async (req, res) => {
+  const filename = req.query.file || "reminders.json";
+  const db = getTaskDb(filename);
+  try {
+    await db.read();
+    const idx = db.data.tasks.findIndex((t) => t.id === req.params.id);
+    if (idx === -1) return res.status(404).json({ error: "Task not found" });
+    db.data.tasks[idx] = {
+      ...db.data.tasks[idx],
+      ...req.body,
+      updated_date: new Date().toISOString(),
+    };
+    await db.write();
+    res.json(db.data.tasks[idx]);
+  } catch {
+    res.status(500).json({ error: "Failed to update task" });
+  }
+});
+
+app.delete("/api/tasks/:id", async (req, res) => {
+  const filename = req.query.file || "reminders.json";
+  const db = getTaskDb(filename);
+  try {
+    await db.read();
+    const toDelete = new Set([req.params.id]);
+    const collect = (pid) =>
+      db.data.tasks.forEach((t) => {
+        if (t.parent_id === pid) {
+          toDelete.add(t.id);
+          collect(t.id);
+        }
+      });
+    collect(req.params.id);
+    db.data.tasks = db.data.tasks.filter((t) => !toDelete.has(t.id));
+    await db.write();
+    res.json({ success: true });
+  } catch {
+    res.status(500).json({ error: "Failed to delete task" });
+  }
+});
+
+app.get("/api/tasks/:id", async (req, res) => {
+  const filename = req.query.file || "reminders.json";
+  const db = getTaskDb(filename);
+  try {
+    await db.read();
+    const task = db.data.tasks.find((t) => t.id === req.params.id);
+    task ? res.json(task) : res.status(404).json({ error: "Not found" });
+  } catch {
+    res.status(500).json({ error: "Failed to get task" });
+  }
+});
+
+/* -------------------------------------------------------------------------- */
+/*                               ARTICLES, INTERNS, CATEGORIES                */
+/* -------------------------------------------------------------------------- */
+// (unchanged – keep your original routes here)
+app.get("/api/articles", async (req, res) => {
+  await articlesDb.read();
+  res.json(articlesDb.data.articles || []);
+});
 app.post("/api/articles", async (req, res) => {
   await articlesDb.read();
-  const newArticle = {
+  const a = {
     id: Date.now().toString(),
     ...req.body,
     createdAt: new Date().toISOString(),
   };
-  articlesDb.data.articles.push(newArticle);
+  articlesDb.data.articles.push(a);
   await articlesDb.write();
-  res.json(newArticle);
+  res.json(a);
 });
-
 app.put("/api/articles/:id", async (req, res) => {
   await articlesDb.read();
-  const id = req.params.id;
-  const index = articlesDb.data.articles.findIndex((a) => a.id === id);
-  if (index !== -1) {
-    articlesDb.data.articles[index] = {
-      ...articlesDb.data.articles[index],
-      ...req.body,
-      updatedAt: new Date().toISOString(),
-    };
-    await articlesDb.write();
-    res.json(articlesDb.data.articles[index]);
-  } else {
-    res.status(404).json({ error: "Article not found" });
-  }
-});
-
-app.delete("/api/articles/:id", async (req, res) => {
-  await articlesDb.read();
-  const id = req.params.id;
-  articlesDb.data.articles = articlesDb.data.articles.filter(
-    (a) => a.id !== id
-  );
-  await articlesDb.write();
-  res.json({ success: true });
-});
-
-app.get("/api/articles/:id", async (req, res) => {
-  await articlesDb.read();
-  const id = req.params.id;
-  const article = articlesDb.data.articles.find((a) => a.id === id);
-  if (article) res.json(article);
-  else res.status(404).json({ error: "Not found" });
-});
-
-app.post("/api/articles/:id/comments", async (req, res) => {
-  await articlesDb.read();
-  const id = req.params.id;
-  const articleIndex = articlesDb.data.articles.findIndex((a) => a.id === id);
-  if (articleIndex === -1)
-    return res.status(404).json({ error: "Article not found" });
-
-  const newComment = {
-    id: Date.now().toString() + Math.random(),
-    name: req.body.name,
-    email: req.body.email || null,
-    content: req.body.content,
-    createdAt: new Date().toISOString(),
-  };
-
-  if (!articlesDb.data.articles[articleIndex].comments) {
-    articlesDb.data.articles[articleIndex].comments = [];
-  }
-  articlesDb.data.articles[articleIndex].comments.push(newComment);
-
-  await articlesDb.write();
-  res.json(articlesDb.data.articles[articleIndex]);
-});
-
-app.put("/api/articles/:articleId/comments/:commentId", async (req, res) => {
-  await articlesDb.read();
-  const articleId = req.params.articleId;
-  const commentId = req.params.commentId;
-  const articleIndex = articlesDb.data.articles.findIndex(
-    (a) => a.id === articleId
-  );
-
-  if (articleIndex === -1)
-    return res.status(404).json({ error: "Article not found" });
-
-  const comments = articlesDb.data.articles[articleIndex].comments;
-  if (!comments)
-    return res.status(404).json({ error: "Comments not found for article" });
-
-  const commentIndex = comments.findIndex((c) => c.id === commentId);
-
-  if (commentIndex === -1)
-    return res.status(404).json({ error: "Comment not found" });
-
-  const updatedComment = {
-    ...comments[commentIndex],
+  const idx = articlesDb.data.articles.findIndex((a) => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  articlesDb.data.articles[idx] = {
+    ...articlesDb.data.articles[idx],
     ...req.body,
     updatedAt: new Date().toISOString(),
   };
-
-  articlesDb.data.articles[articleIndex].comments[commentIndex] =
-    updatedComment;
   await articlesDb.write();
-  res.json(updatedComment);
+  res.json(articlesDb.data.articles[idx]);
 });
-
-app.delete("/api/articles/:articleId/comments/:commentId", async (req, res) => {
+app.delete("/api/articles/:id", async (req, res) => {
   await articlesDb.read();
-  const articleId = req.params.articleId;
-  const commentId = req.params.commentId;
-  const articleIndex = articlesDb.data.articles.findIndex(
-    (a) => a.id === articleId
+  articlesDb.data.articles = articlesDb.data.articles.filter(
+    (a) => a.id !== req.params.id
   );
-
-  if (articleIndex === -1)
-    return res.status(404).json({ error: "Article not found" });
-
-  let comments = articlesDb.data.articles[articleIndex].comments;
-  if (!comments)
-    return res.status(404).json({ error: "Comments not found for article" });
-
-  const initialLength = comments.length;
-  articlesDb.data.articles[articleIndex].comments = comments.filter(
-    (c) => c.id !== commentId
+  await articlesDb.write();
+  res.json({ success: true });
+});
+app.get("/api/articles/:id", async (req, res) => {
+  await articlesDb.read();
+  const a = articlesDb.data.articles.find((a) => a.id === req.params.id);
+  a ? res.json(a) : res.status(404).json({ error: "Not found" });
+});
+app.post("/api/articles/:id/comments", async (req, res) => {
+  await articlesDb.read();
+  const idx = articlesDb.data.articles.findIndex((a) => a.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  const c = {
+    id: Date.now().toString() + Math.random(),
+    ...req.body,
+    createdAt: new Date().toISOString(),
+  };
+  articlesDb.data.articles[idx].comments =
+    articlesDb.data.articles[idx].comments || [];
+  articlesDb.data.articles[idx].comments.push(c);
+  await articlesDb.write();
+  res.json(articlesDb.data.articles[idx]);
+});
+app.put("/api/articles/:aid/comments/:cid", async (req, res) => {
+  await articlesDb.read();
+  const aIdx = articlesDb.data.articles.findIndex(
+    (a) => a.id === req.params.aid
   );
-
-  if (
-    articlesDb.data.articles[articleIndex].comments.length === initialLength
-  ) {
+  if (aIdx === -1) return res.status(404).json({ error: "Article not found" });
+  const cIdx = articlesDb.data.articles[aIdx].comments?.findIndex(
+    (c) => c.id === req.params.cid
+  );
+  if (cIdx === -1) return res.status(404).json({ error: "Comment not found" });
+  articlesDb.data.articles[aIdx].comments[cIdx] = {
+    ...articlesDb.data.articles[aIdx].comments[cIdx],
+    ...req.body,
+    updatedAt: new Date().toISOString(),
+  };
+  await articlesDb.write();
+  res.json(articlesDb.data.articles[aIdx].comments[cIdx]);
+});
+app.delete("/api/articles/:aid/comments/:cid", async (req, res) => {
+  await articlesDb.read();
+  const aIdx = articlesDb.data.articles.findIndex(
+    (a) => a.id === req.params.aid
+  );
+  if (aIdx === -1) return res.status(404).json({ error: "Article not found" });
+  const initial = articlesDb.data.articles[aIdx].comments?.length || 0;
+  articlesDb.data.articles[aIdx].comments =
+    articlesDb.data.articles[aIdx].comments?.filter(
+      (c) => c.id !== req.params.cid
+    ) || [];
+  if (articlesDb.data.articles[aIdx].comments.length === initial)
     return res.status(404).json({ error: "Comment not found" });
-  }
-
   await articlesDb.write();
   res.json({ success: true });
 });
 
-// API Routes for Interns
 app.get("/api/interns", async (req, res) => {
   await internsDb.read();
-  res.json(internsDb.data?.interns || []);
+  res.json(internsDb.data.interns || []);
 });
-
 app.post("/api/interns", async (req, res) => {
   await internsDb.read();
-  const newIntern = {
+  const i = {
     id: Date.now().toString(),
     ...req.body,
     createdAt: new Date().toISOString(),
   };
-  internsDb.data.interns.push(newIntern);
+  internsDb.data.interns.push(i);
   await internsDb.write();
-  res.json(newIntern);
+  res.json(i);
 });
-
 app.put("/api/interns/:id", async (req, res) => {
   await internsDb.read();
-  const id = req.params.id;
-  const index = internsDb.data.interns.findIndex((i) => i.id === id);
-  if (index !== -1) {
-    internsDb.data.interns[index] = {
-      ...internsDb.data.interns[index],
-      ...req.body,
-    };
-    await internsDb.write();
-    res.json(internsDb.data.interns[index]);
-  } else {
-    res.status(404).json({ error: "Intern not found" });
-  }
+  const idx = internsDb.data.interns.findIndex((i) => i.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ error: "Not found" });
+  internsDb.data.interns[idx] = { ...internsDb.data.interns[idx], ...req.body };
+  await internsDb.write();
+  res.json(internsDb.data.interns[idx]);
 });
-
 app.delete("/api/interns/:id", async (req, res) => {
   await internsDb.read();
-  const id = req.params.id;
-  internsDb.data.interns = internsDb.data.interns.filter((i) => i.id !== id);
+  internsDb.data.interns = internsDb.data.interns.filter(
+    (i) => i.id !== req.params.id
+  );
   await internsDb.write();
   res.json({ success: true });
 });
-
 app.get("/api/interns/:id", async (req, res) => {
   await internsDb.read();
-  const id = req.params.id;
-  const intern = internsDb.data.interns.find((i) => i.id === id);
-  if (intern) res.json(intern);
-  else res.status(404).json({ error: "Not found" });
+  const i = internsDb.data.interns.find((i) => i.id === req.params.id);
+  i ? res.json(i) : res.status(404).json({ error: "Not found" });
 });
 
-// API Routes for Categories
 app.get("/api/categories", async (req, res) => {
   await categoriesDb.read();
-  res.json(categoriesDb.data?.categories || []);
+  res.json(categoriesDb.data.categories || []);
 });
-
 app.post("/api/categories", async (req, res) => {
   await categoriesDb.read();
-  const newCategory = {
+  const c = {
     id: Date.now().toString(),
     ...req.body,
     createdAt: new Date().toISOString(),
   };
-  categoriesDb.data.categories.push(newCategory);
+  categoriesDb.data.categories.push(c);
   await categoriesDb.write();
-  res.json(newCategory);
+  res.json(c);
 });
-
 app.put("/api/categories/:id", async (req, res) => {
   await categoriesDb.read();
-  const id = req.params.id;
-  const updateRecursive = (nodes) => {
+  const update = (nodes) => {
     for (let i = 0; i < nodes.length; i++) {
-      if (nodes[i].id === id) {
+      if (nodes[i].id === req.params.id) {
         nodes[i] = {
           ...nodes[i],
           ...req.body,
@@ -307,118 +420,34 @@ app.put("/api/categories/:id", async (req, res) => {
         };
         return true;
       }
-      if (nodes[i].subcategories && updateRecursive(nodes[i].subcategories))
-        return true;
+      if (nodes[i].subcategories && update(nodes[i].subcategories)) return true;
     }
     return false;
   };
-
-  const updated = updateRecursive(categoriesDb.data.categories);
-  if (updated) {
-    await categoriesDb.write();
-    res.json({ success: true });
-  } else {
-    res.status(404).json({ error: "Category not found" });
-  }
+  update(categoriesDb.data.categories)
+    ? (await categoriesDb.write(), res.json({ success: true }))
+    : res.status(404).json({ error: "Not found" });
 });
-
 app.delete("/api/categories/:id", async (req, res) => {
   await categoriesDb.read();
-  const id = req.params.id;
   categoriesDb.data.categories = categoriesDb.data.categories.filter(
-    (c) => c.id !== id
+    (c) => c.id !== req.params.id
   );
   await categoriesDb.write();
   res.json({ success: true });
 });
 
-app.get("/api/tasks", async (req, res) => {
-  await remindersDb.read();
-
-  let tasks = remindersDb.data?.tasks || [];
-  const sortBy = req.query._sort;
-  const order = req.query._order === "desc" ? -1 : 1;
-
-  if (sortBy) {
-    tasks.sort((a, b) => {
-      if (a[sortBy] < b[sortBy]) return -1 * order;
-      if (a[sortBy] > b[sortBy]) return 1 * order;
-      return 0;
-    });
-  }
-
-  res.json(tasks);
-});
-
-app.post("/api/tasks", async (req, res) => {
-  await remindersDb.read();
-  const newTask = {
-    id: Date.now().toString(), // Backend generates ID
-    ...req.body,
-    created_date: new Date().toISOString(), // Use created_date for consistency with base44 schema
-    updated_date: new Date().toISOString(),
-  };
-  remindersDb.data.tasks.push(newTask);
-  await remindersDb.write();
-  res.json(newTask);
-});
-
-app.put("/api/tasks/:id", async (req, res) => {
-  await remindersDb.read();
-  const id = req.params.id;
-  const index = remindersDb.data.tasks.findIndex((t) => t.id === id);
-  if (index !== -1) {
-    remindersDb.data.tasks[index] = {
-      ...remindersDb.data.tasks[index],
-      ...req.body,
-      updated_date: new Date().toISOString(), // Update updated_date
-    };
-    await remindersDb.write();
-    res.json(remindersDb.data.tasks[index]);
-  } else {
-    res.status(404).json({ error: "Task not found" });
-  }
-});
-
-app.delete("/api/tasks/:id", async (req, res) => {
-  await remindersDb.read();
-  const id = req.params.id;
-  // Also delete all subtasks recursively
-  const tasksToDelete = new Set([id]);
-  const findChildren = (parentId) => {
-    remindersDb.data.tasks.forEach((task) => {
-      if (task.parent_id === parentId) {
-        tasksToDelete.add(task.id);
-        findChildren(task.id);
-      }
-    });
-  };
-  findChildren(id);
-
-  remindersDb.data.tasks = remindersDb.data.tasks.filter(
-    (t) => !tasksToDelete.has(t.id)
-  );
-  await remindersDb.write();
-  res.json({ success: true });
-});
-
-app.get("/api/tasks/:id", async (req, res) => {
-  await remindersDb.read();
-  const id = req.params.id;
-  const task = remindersDb.data.tasks.find((t) => t.id === id);
-  if (task) res.json(task);
-  else res.status(404).json({ error: "Not found" });
-});
-
-// Serve static Vite build (frontend)
+/* -------------------------------------------------------------------------- */
+/*                               SERVE FRONTEND                               */
+/* -------------------------------------------------------------------------- */
 app.use(express.static(path.join(__dirname, "../dist")));
+app.get("/*", (req, res) =>
+  res.sendFile(path.join(__dirname, "../dist/index.html"))
+);
 
-app.use("/*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../dist/index.html"));
-});
-
+/* -------------------------------------------------------------------------- */
+/*                                   STARTUP                                  */
+/* -------------------------------------------------------------------------- */
 initDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 });

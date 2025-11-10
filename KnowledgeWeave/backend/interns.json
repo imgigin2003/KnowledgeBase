@@ -63,7 +63,7 @@
           "title": "JS Course (Part 1)",
           "description": "",
           "type": "course",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1761401156685",
@@ -77,21 +77,21 @@
           "title": "Section 3 & 4",
           "description": "",
           "type": "exercise",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1761401185245",
           "title": "Section 5 & 6",
           "description": "",
           "type": "exercise",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1761401239585",
           "title": "Section 7",
           "description": "",
           "type": "exercise",
-          "completed": false
+          "completed": true
         },
         {
           "id": "1761401253852",
@@ -111,7 +111,7 @@
       "start_date": "2025-09-15",
       "program": "Bio Informatic Expert / Python Beginner",
       "mentor": "Negin Parseh",
-      "status": "active",
+      "status": "on_hold",
       "requirements": [
         {
           "id": "1758888456147",
@@ -166,7 +166,7 @@
       "start_date": "2025-09-26",
       "program": "Regular Intern",
       "mentor": "Negin Parseh",
-      "status": "active",
+      "status": "terminated",
       "requirements": [
         {
           "id": "1758888713313",
@@ -235,7 +235,7 @@
       "start_date": "2025-09-30",
       "program": "Python Beginner",
       "mentor": "Negin Parseh",
-      "status": "active",
+      "status": "terminated",
       "requirements": [
         {
           "id": "1759218171509",

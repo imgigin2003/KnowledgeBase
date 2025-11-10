@@ -36,7 +36,7 @@ export default function TaskManager() {
     status: "all",
     color: "all",
     tags: [],
-    dateRange: { startDate: null, endDate: null }, // New: dateRange filter
+    dateRange: { from: undefined, to: undefined }, // Initialize with 'from' and 'to' for shadcn Calendar
   });
   const [selectedFile, setSelectedFile] = useState("reminders.json");
   const [taskFiles, setTaskFiles] = useState(["reminders.json"]);
@@ -164,7 +164,7 @@ export default function TaskManager() {
   // Filter tasks - MODIFIED to include date filtering and archived status logic
   const filterTasks = (allTasks) => {
     return allTasks.filter((task) => {
-      // 3. Archive status behavior: Hide archived tasks by default
+      // 3. Archive status behavior: Hide archived tasks by default unless explicitly filtered
       if (task.status === "archived" && filters.status !== "archived") {
         return false;
       }
@@ -184,15 +184,15 @@ export default function TaskManager() {
         filters.tags.length === 0 ||
         filters.tags.some((tag) => task.tags?.includes(tag));
 
-      // 1. Search by date filter
+      // 1. Search by date filter - use 'from' and 'to'
       const taskCreatedDate = task.created_date
         ? new Date(task.created_date)
         : null;
-      const matchesStartDate = filters.dateRange?.startDate
-        ? taskCreatedDate && taskCreatedDate >= filters.dateRange.startDate
+      const matchesStartDate = filters.dateRange?.from
+        ? taskCreatedDate && taskCreatedDate >= filters.dateRange.from
         : true;
-      const matchesEndDate = filters.dateRange?.endDate
-        ? taskCreatedDate && taskCreatedDate <= filters.dateRange.endDate
+      const matchesEndDate = filters.dateRange?.to
+        ? taskCreatedDate && taskCreatedDate <= filters.dateRange.to
         : true;
 
       return (
@@ -361,7 +361,7 @@ export default function TaskManager() {
                 onDelete={handleDeleteTask}
                 onStatusChange={handleStatusChange}
                 onAddSubtask={handleAddSubtask}
-                condensedView={condensedView} // Pass condensedView
+                condensedView={condensedView}
               />
             </CardContent>
           </Card>

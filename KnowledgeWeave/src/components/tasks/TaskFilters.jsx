@@ -1,3 +1,4 @@
+import React from "react";
 import {
   Select,
   SelectContent,
@@ -7,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Popover,
   PopoverContent,
@@ -62,8 +64,8 @@ export default function TaskFilters({
     filters.status !== "all" ||
     filters.color !== "all" ||
     filters.tags.length > 0 ||
-    filters.dateRange?.startDate ||
-    filters.dateRange?.endDate;
+    filters.dateRange?.from || // Check 'from' for active filter
+    filters.dateRange?.to; // Check 'to' for active filter
 
   const handleClearFilters = () => {
     onFiltersChange({
@@ -71,7 +73,7 @@ export default function TaskFilters({
       status: "all",
       color: "all",
       tags: [],
-      dateRange: { startDate: null, endDate: null },
+      dateRange: { from: null, to: null }, // Reset to 'from' and 'to'
     });
   };
 
@@ -174,18 +176,20 @@ export default function TaskFilters({
                 variant={"outline"}
                 className={cn(
                   "w-full justify-start text-left font-normal",
-                  !filters.dateRange?.startDate && "text-muted-foreground"
+                  !filters.dateRange?.from &&
+                    !filters.dateRange?.to &&
+                    "text-muted-foreground" // Use 'from' and 'to' from shadcn calendar
                 )}
               >
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.dateRange?.startDate ? (
-                  filters.dateRange.endDate ? (
+                {filters.dateRange?.from ? ( // Use 'from'
+                  filters.dateRange.to ? ( // Use 'to'
                     <>
-                      {format(filters.dateRange.startDate, "LLL dd, y")} -{" "}
-                      {format(filters.dateRange.endDate, "LLL dd, y")}
+                      {format(filters.dateRange.from, "LLL dd, y")} -{" "}
+                      {format(filters.dateRange.to, "LLL dd, y")}
                     </>
                   ) : (
-                    format(filters.dateRange.startDate, "LLL dd, y")
+                    format(filters.dateRange.from, "LLL dd, y")
                   )
                 ) : (
                   <span>Pick a date range</span>
@@ -195,9 +199,9 @@ export default function TaskFilters({
             <PopoverContent className="w-auto p-0" align="start">
               <Calendar
                 mode="range"
-                selected={filters.dateRange}
-                onSelect={(range) =>
-                  onFiltersChange({ ...filters, dateRange: range })
+                selected={filters.dateRange} // Pass the entire object
+                onSelect={
+                  (range) => onFiltersChange({ ...filters, dateRange: range }) // Update with the entire range object
                 }
                 numberOfMonths={2}
               />

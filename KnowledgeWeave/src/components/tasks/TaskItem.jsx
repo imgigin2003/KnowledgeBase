@@ -1,5 +1,7 @@
+import React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import {
@@ -64,9 +66,9 @@ export default function TaskItem({
   onEdit,
   onDelete,
   onStatusChange,
-  onAddSubtask,
   isExpanded,
   onToggleExpand,
+  onAddSubtask,
   condensedView,
 }) {
   const hasChildren = task.children && task.children.length > 0;
@@ -109,7 +111,7 @@ export default function TaskItem({
     return Math.round((completedCount / totalCount) * 100);
   };
 
-  const progress = calculateProgress(task.id); // Always calculate, then use for display
+  const progress = calculateProgress(task.id);
   const statusConfig = STATUS_CONFIG[task.status];
   const priorityConfig = PRIORITY_CONFIG[task.priority];
   const colorClass = COLOR_CONFIG[task.color];
@@ -122,46 +124,102 @@ export default function TaskItem({
     }
   };
 
+  // NEW: Determine status-specific date and label
+  const getStatusDateInfo = (task) => {
+    const status = task.status;
+    const statusDates = task.status_dates || {};
+    let dateToDisplay = null;
+    let dateLabel = "";
+
+    if (statusDates[status]) {
+      dateToDisplay = new Date(statusDates[status]);
+      dateLabel = status
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+    } else if (task.created_date) {
+      dateToDisplay = new Date(task.created_date);
+      dateLabel = "Created";
+    }
+
+    return dateToDisplay
+      ? `${dateLabel} on ${format(dateToDisplay, "MMM d, yyyy")}`
+      : null;
+  };
+
+  const statusDateInfo = getStatusDateInfo(task);
+
   return (
     <div className="select-none">
       <div
         className={cn(
           "flex items-start gap-2 hover:bg-slate-50 rounded group",
-          condensedView ? "p-0.5" : "p-2"
+          condensedView ? "py-0.5 pr-1 pl-0.5" : "p-2" // Reduced padding for condensed view
         )}
       >
+        {/* Checkbox */}
+        <Checkbox
+          checked={isCompleted}
+          onCheckedChange={handleCheckboxChange}
+          className={cn("mt-1 flex-shrink-0", condensedView ? "scale-90" : "")}
+        />
+
+        {/* Expand/Collapse Button */}
         {hasChildren ? (
           <button
             onClick={() => onToggleExpand(task.id)}
-            className="mt-1 p-1 hover:bg-slate-200 rounded transition-colors flex-shrink-0"
+            className={cn(
+              "mt-1 p-1 hover:bg-slate-200 rounded transition-colors flex-shrink-0",
+              condensedView ? "h-6 w-6" : ""
+            )}
           >
             {isExpanded ? (
-              <ChevronDown className="w-4 h-4 text-slate-600" />
+              <ChevronDown
+                className={cn(
+                  "w-4 h-4 text-slate-600",
+                  condensedView ? "w-3.5 h-3.5" : ""
+                )}
+              />
             ) : (
-              <ChevronRight className="w-4 h-4 text-slate-600" />
+              <ChevronRight
+                className={cn(
+                  "w-4 h-4 text-slate-600",
+                  condensedView ? "w-3.5 h-3.5" : ""
+                )}
+              />
             )}
           </button>
         ) : (
-          <div className="w-6 flex-shrink-0"></div>
+          <div
+            className={cn("w-6 flex-shrink-0", condensedView ? "w-4" : "")}
+          ></div> // Smaller empty space
         )}
 
+        {/* Color Indicator */}
         <div
-          className={`w-1 h-6 ${colorClass} rounded-full flex-shrink-0 mt-1`}
+          className={cn(
+            `w-1 ${colorClass} rounded-full flex-shrink-0 mt-1`,
+            condensedView ? "h-5" : "h-6"
+          )}
         ></div>
 
         <div className="flex-1 min-w-0">
           <div
             className={cn(
-              "flex items-start justify-between gap-2",
-              condensedView ? "flex-col items-stretch" : "flex-row"
+              "flex items-center justify-between gap-2", // Use items-center for better vertical alignment
+              condensedView ? "flex-row" : "flex-row items-start" // Keep flex-row, but adjust alignment
             )}
           >
-            <div className="flex-1 min-w-0">
+            <div
+              className={cn(
+                "flex-1 min-w-0",
+                condensedView ? "flex flex-row items-center flex-wrap" : ""
+              )}
+            >
               <h3
                 className={cn(
                   "font-semibold text-slate-900 text-sm",
                   isCompleted && "line-through text-slate-500",
-                  condensedView ? "mb-0 leading-tight" : "mb-1"
+                  condensedView ? "mb-0 leading-tight mr-2" : "mb-1" // Reduced margin and tight leading
                 )}
               >
                 {task.name}
@@ -169,14 +227,17 @@ export default function TaskItem({
 
               <div
                 className={cn(
-                  "flex flex-wrap items-center gap-x-2 text-xs",
+                  "flex flex-wrap items-center gap-x-1.5 text-xs", // Reduced gap-x
                   condensedView ? "mt-0.5" : ""
                 )}
               >
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
-                      className={`${statusConfig.color} px-2 py-0.5 rounded text-xs font-medium hover:opacity-80 transition-opacity`}
+                      className={cn(
+                        `${statusConfig.color} px-2 py-0.5 rounded text-xs font-medium hover:opacity-80 transition-opacity`,
+                        condensedView ? "px-1.5 py-0.5 text-[0.6rem]" : ""
+                      )} // Smaller padding/font
                     >
                       {statusConfig.label}
                     </button>
@@ -198,7 +259,10 @@ export default function TaskItem({
                 </DropdownMenu>
 
                 <Badge
-                  className={`${priorityConfig.color} border-0 text-xs px-1.5 py-0`}
+                  className={cn(
+                    `${priorityConfig.color} border-0 text-xs px-1.5 py-0`,
+                    condensedView ? "text-[0.6rem] px-1" : ""
+                  )}
                 >
                   {priorityConfig.label}
                 </Badge>
@@ -206,38 +270,72 @@ export default function TaskItem({
                 {task.deadline && (
                   <Badge
                     variant="outline"
-                    className="flex items-center gap-1 text-xs px-1.5 py-0"
+                    className={cn(
+                      "flex items-center gap-1 text-xs px-1.5 py-0",
+                      condensedView ? "text-[0.6rem] px-1" : ""
+                    )}
                   >
-                    <Calendar className="w-3 h-3" />
+                    <Calendar
+                      className={cn(
+                        "w-3 h-3",
+                        condensedView ? "w-2.5 h-2.5" : ""
+                      )}
+                    />
                     {format(new Date(task.deadline), "MMM d, HH:mm")}
                   </Badge>
                 )}
 
-                {/* Display created_date field */}
-                {task.created_date && (
+                {/* NEW: Display status-specific date */}
+                {statusDateInfo && (
                   <Badge
                     variant="outline"
-                    className="flex items-center gap-1 text-xs px-1.5 py-0"
+                    className={cn(
+                      "flex items-center gap-1 text-xs px-1.5 py-0",
+                      condensedView ? "text-[0.6rem] px-1" : ""
+                    )}
                   >
-                    <Clock className="w-3 h-3" />
-                    {format(new Date(task.created_date), "MMM d, yyyy")}
+                    <Clock
+                      className={cn(
+                        "w-3 h-3",
+                        condensedView ? "w-2.5 h-2.5" : ""
+                      )}
+                    />
+                    {statusDateInfo}
                   </Badge>
                 )}
 
                 {task.tags && task.tags.length > 0 && (
-                  <div className="flex items-center gap-1">
-                    <TagIcon className="w-3 h-3 text-slate-400" />
+                  <div
+                    className={cn(
+                      "flex items-center gap-1",
+                      condensedView ? "" : ""
+                    )}
+                  >
+                    <TagIcon
+                      className={cn(
+                        "w-3 h-3 text-slate-400",
+                        condensedView ? "w-2.5 h-2.5" : ""
+                      )}
+                    />
                     {task.tags.slice(0, 2).map((tag, index) => (
                       <Badge
                         key={index}
                         variant="outline"
-                        className="text-xs px-1.5 py-0"
+                        className={cn(
+                          "text-xs px-1.5 py-0",
+                          condensedView ? "text-[0.6rem] px-1" : ""
+                        )}
                       >
                         {tag}
                       </Badge>
                     ))}
                     {task.tags.length > 2 && (
-                      <span className="text-xs text-slate-500">
+                      <span
+                        className={cn(
+                          "text-xs text-slate-500",
+                          condensedView ? "text-[0.6rem]" : ""
+                        )}
+                      >
                         +{task.tags.length - 2}
                       </span>
                     )}
@@ -247,14 +345,16 @@ export default function TaskItem({
                 {/* Progress bar and text - show here when condensed */}
                 {condensedView && progress !== null && (
                   <div className="flex items-center gap-1">
-                    <Progress value={progress} className="h-1.5 w-12" />{" "}
-                    {/* Smaller progress bar */}
+                    <Progress value={progress} className="h-1 w-10" />{" "}
+                    {/* Even smaller progress bar */}
                     <span
-                      className={`text-xs ${
+                      className={cn(
+                        `text-xs`,
+                        condensedView ? "text-[0.6rem]" : "",
                         isCompleted || task.status === "archived"
                           ? "text-green-600 font-medium"
                           : "text-slate-500"
-                      }`}
+                      )}
                     >
                       {progress}%
                     </span>
@@ -279,34 +379,58 @@ export default function TaskItem({
               )}
             </div>
 
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+            {/* Action Buttons - Moved to be inline and to the right when condensed */}
+            <div
+              className={cn(
+                "flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0",
+                condensedView ? "ml-auto" : "" // Push to the right when condensed
+              )}
+            >
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => onAddSubtask(task)}
-                className="h-7 w-7 text-green-600 hover:text-green-800 hover:bg-green-50"
+                className={cn(
+                  "h-7 w-7 text-green-600 hover:text-green-800 hover:bg-green-50",
+                  condensedView ? "h-6 w-6" : ""
+                )}
                 title="Add subtask"
               >
-                <Plus className="w-3.5 h-3.5" />
+                <Plus
+                  className={cn("w-3.5 h-3.5", condensedView ? "w-3 h-3" : "")}
+                />
               </Button>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => onEdit(task)}
-                className="h-7 w-7 text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                className={cn(
+                  "h-7 w-7 text-slate-600 hover:text-slate-800 hover:bg-slate-100",
+                  condensedView ? "h-6 w-6" : ""
+                )}
                 title="Edit task"
               >
-                <Edit3 className="w-3.5 h-3.5" />
+                <Edit3
+                  className={cn("w-3.5 h-3.5", condensedView ? "w-3 h-3" : "")}
+                />
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-red-600 hover:text-red-800 hover:bg-red-50"
+                    className={cn(
+                      "h-7 w-7 text-red-600 hover:text-red-800 hover:bg-red-50",
+                      condensedView ? "h-6 w-6" : ""
+                    )}
                     title="Delete task"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2
+                      className={cn(
+                        "w-3.5 h-3.5",
+                        condensedView ? "w-3 h-3" : ""
+                      )}
+                    />
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>

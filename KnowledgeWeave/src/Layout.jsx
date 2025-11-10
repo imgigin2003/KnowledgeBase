@@ -383,12 +383,10 @@ export default function Layout({ children, currentPageName }) {
                               >
                                 <Link
                                   to={createPageUrl("Dashboard")}
-                                  className="flex flex-row items-center gap-2 w-full px-3 py-2"
+                                  className="flex items-center gap-3 px-3 py-2"
                                 >
-                                  <Home className="w-5 h-5 flex-shrink-0" />
-                                  <span className="font-medium whitespace-nowrap">
-                                    Dashboard
-                                  </span>
+                                  <Home className="w-4 h-4" />
+                                  <span className="font-medium">Dashboard</span>
                                 </Link>
                               </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -404,10 +402,10 @@ export default function Layout({ children, currentPageName }) {
                               >
                                 <Link
                                   to={createPageUrl("InternTracking")}
-                                  className="flex flex-row items-center justify-start gap-3 w-full px-3 py-2"
+                                  className="flex items-center gap-3 px-3 py-2"
                                 >
-                                  <ClipboardList className="w-5 h-5 flex-shrink-0" />
-                                  <span className="font-medium whitespace-nowrap">
+                                  <ClipboardList className="w-4 h-4" />
+                                  <span className="font-medium">
                                     Intern Tracking
                                   </span>
                                 </Link>
@@ -427,7 +425,7 @@ export default function Layout({ children, currentPageName }) {
                                   to={createPageUrl("TaskManager")}
                                   className="flex items-center gap-3 px-3 py-2"
                                 >
-                                  <CheckSquare className="w-4 h-4 flex-shrink-0" />
+                                  <CheckSquare className="w-4 h-4" />
                                   <span className="font-medium">
                                     Task Manager
                                   </span>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Task } from "@/entities/Task";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import {
   FileText,
   Upload,
   ChevronDown,
+  Rows3, // Icon for condensed view
+  List, // Icon for normal view
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -19,6 +21,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { Toggle } from "@/components/ui/toggle"; // Assuming you have a Toggle component
 
 import TaskTree from "../components/tasks/TaskTree";
 import TaskEditor from "../components/tasks/TaskEditor";
@@ -33,9 +36,11 @@ export default function TaskManager() {
     status: "all",
     color: "all",
     tags: [],
+    dateRange: { startDate: null, endDate: null }, // New: dateRange filter
   });
   const [selectedFile, setSelectedFile] = useState("reminders.json");
   const [taskFiles, setTaskFiles] = useState(["reminders.json"]);
+  const [condensedView, setCondensedView] = useState(false); // New: condensed view toggle
   const fileInputRef = useRef(null);
 
   const queryClient = useQueryClient();
@@ -64,7 +69,6 @@ export default function TaskManager() {
     mutationFn: (taskData) => Task.create(taskData, selectedFile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", selectedFile] });
-      queryClient.refetchQueries({ queryKey: ["tasks", selectedFile] });
       setShowEditor(false);
       setEditingTask(null);
     },
@@ -74,7 +78,6 @@ export default function TaskManager() {
     mutationFn: ({ id, taskData }) => Task.update(id, taskData, selectedFile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", selectedFile] });
-      queryClient.refetchQueries({ queryKey: ["tasks", selectedFile] });
       setShowEditor(false);
       setEditingTask(null);
     },
@@ -84,7 +87,6 @@ export default function TaskManager() {
     mutationFn: (id) => Task.delete(id, selectedFile),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", selectedFile] });
-      queryClient.refetchQueries({ queryKey: ["tasks", selectedFile] });
     },
   });
 
@@ -149,6 +151,7 @@ export default function TaskManager() {
     }
   };
 
+  // Build tree structure - no change needed here
   const buildTree = (tasks, parentId = null) => {
     return tasks
       .filter((task) => task.parent_id === parentId)
@@ -158,8 +161,14 @@ export default function TaskManager() {
       }));
   };
 
-  const filterTasks = (tasks) => {
-    return tasks.filter((task) => {
+  // Filter tasks - MODIFIED to include date filtering and archived status logic
+  const filterTasks = (allTasks) => {
+    return allTasks.filter((task) => {
+      // 3. Archive status behavior: Hide archived tasks by default
+      if (task.status === "archived" && filters.status !== "archived") {
+        return false;
+      }
+
       const matchesSearch =
         !searchTerm ||
         task.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -175,12 +184,25 @@ export default function TaskManager() {
         filters.tags.length === 0 ||
         filters.tags.some((tag) => task.tags?.includes(tag));
 
+      // 1. Search by date filter
+      const taskCreatedDate = task.created_date
+        ? new Date(task.created_date)
+        : null;
+      const matchesStartDate = filters.dateRange?.startDate
+        ? taskCreatedDate && taskCreatedDate >= filters.dateRange.startDate
+        : true;
+      const matchesEndDate = filters.dateRange?.endDate
+        ? taskCreatedDate && taskCreatedDate <= filters.dateRange.endDate
+        : true;
+
       return (
         matchesSearch &&
         matchesPriority &&
         matchesStatus &&
         matchesColor &&
-        matchesTags
+        matchesTags &&
+        matchesStartDate &&
+        matchesEndDate
       );
     });
   };
@@ -222,6 +244,20 @@ export default function TaskManager() {
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {/* 4. Toggle for condensed layout */}
+            <Toggle
+              pressed={condensedView}
+              onPressedChange={setCondensedView}
+              aria-label="Toggle condensed view"
+              className="text-slate-600 hover:text-blue-600 data-[state=on]:bg-blue-100 data-[state=on]:text-blue-600"
+            >
+              {condensedView ? (
+                <Rows3 className="h-5 w-5" />
+              ) : (
+                <List className="h-5 w-5" />
+              )}
+            </Toggle>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="gap-2">
@@ -252,7 +288,7 @@ export default function TaskManager() {
               </DropdownMenuContent>
             </DropdownMenu>
             <input
-              ref={fileInputRef}
+              ref__={fileInputRef}
               type="file"
               accept=".json, application/json"
               onChange={handleFileUpload}
@@ -325,6 +361,7 @@ export default function TaskManager() {
                 onDelete={handleDeleteTask}
                 onStatusChange={handleStatusChange}
                 onAddSubtask={handleAddSubtask}
+                condensedView={condensedView} // Pass condensedView
               />
             </CardContent>
           </Card>

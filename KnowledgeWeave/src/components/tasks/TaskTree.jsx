@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import TaskItem from "./TaskItem";
 
 export default function TaskTree({
@@ -9,6 +9,7 @@ export default function TaskTree({
   onStatusChange,
   onAddSubtask,
   level = 0,
+  condensedView, // New: condensedView prop
 }) {
   const [expandedTasks, setExpandedTasks] = useState(
     new Set(tasks.map((t) => t.id))
@@ -27,7 +28,7 @@ export default function TaskTree({
   return (
     <div
       className={
-        level > 0 ? "ml-6 border-l-2 border-slate-200 pl-3 mt-1" : "space-y-1"
+        level > 0 ? "ml-6 border-l-2 border-slate-200 pl-3 mt-0" : "space-y-1"
       }
     >
       {tasks.map((task) => {
@@ -46,6 +47,7 @@ export default function TaskTree({
               level={level}
               isExpanded={isExpanded}
               onToggleExpand={toggleExpand}
+              condensedView={condensedView} // Pass condensedView
             />
             {hasChildren && isExpanded && (
               <TaskTree
@@ -56,6 +58,7 @@ export default function TaskTree({
                 onStatusChange={onStatusChange}
                 onAddSubtask={onAddSubtask}
                 level={level + 1}
+                condensedView={condensedView}
               />
             )}
           </div>

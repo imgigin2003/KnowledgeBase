@@ -1,9 +1,7 @@
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import {
   ChevronRight,
   ChevronDown,
@@ -12,6 +10,7 @@ import {
   Plus,
   Calendar,
   Tag as TagIcon,
+  Clock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -66,14 +65,18 @@ export default function TaskItem({
   onDelete,
   onStatusChange,
   onAddSubtask,
-  level,
   isExpanded,
   onToggleExpand,
+  condensedView,
 }) {
   const hasChildren = task.children && task.children.length > 0;
   const isCompleted = task.status === "completed" || task.status === "done";
 
+  // Calculate completion progress - MODIFIED for archived status
   const calculateProgress = (taskId) => {
+    // If the task itself is archived, show 100% progress for it
+    if (task.status === "archived") return 100;
+
     const getAllDescendants = (id) => {
       const children = allTasks.filter((t) => t.parent_id === id);
       return [
@@ -84,17 +87,29 @@ export default function TaskItem({
 
     const descendants = getAllDescendants(taskId);
     if (descendants.length === 0) {
+      // If no children, progress is based on own completion
       return isCompleted ? 100 : 0;
     }
 
-    const completed = descendants.filter(
+    // Filter out archived descendants if we are calculating progress for an active parent
+    const activeDescendants = descendants.filter(
+      (d) => d.status !== "archived"
+    );
+    const completedActive = activeDescendants.filter(
       (t) => t.status === "done" || t.status === "completed"
     ).length;
 
-    return Math.round((completed / descendants.length) * 100);
+    // The current task itself also counts towards its own progress
+    const selfCompletion =
+      task.status === "done" || task.status === "completed" ? 1 : 0;
+    const totalCount = activeDescendants.length + 1; // +1 for the parent itself if it's not archived
+    const completedCount = completedActive + selfCompletion;
+
+    if (totalCount === 0) return 0; // Avoid division by zero if no active tasks
+    return Math.round((completedCount / totalCount) * 100);
   };
 
-  const progress = isCompleted ? 100 : calculateProgress(task.id);
+  const progress = calculateProgress(task.id); // Always calculate, then use for display
   const statusConfig = STATUS_CONFIG[task.status];
   const priorityConfig = PRIORITY_CONFIG[task.priority];
   const colorClass = COLOR_CONFIG[task.color];
@@ -109,13 +124,12 @@ export default function TaskItem({
 
   return (
     <div className="select-none">
-      <div className="flex items-start gap-2 p-2 hover:bg-slate-50 rounded group">
-        <Checkbox
-          checked={isCompleted}
-          onCheckedChange={handleCheckboxChange}
-          className="mt-1 flex-shrink-0"
-        />
-
+      <div
+        className={cn(
+          "flex items-start gap-2 hover:bg-slate-50 rounded group",
+          condensedView ? "p-0.5" : "p-2"
+        )}
+      >
         {hasChildren ? (
           <button
             onClick={() => onToggleExpand(task.id)}
@@ -136,17 +150,29 @@ export default function TaskItem({
         ></div>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
+          <div
+            className={cn(
+              "flex items-start justify-between gap-2",
+              condensedView ? "flex-col items-stretch" : "flex-row"
+            )}
+          >
             <div className="flex-1 min-w-0">
               <h3
-                className={`font-semibold text-slate-900 mb-1 text-sm ${
-                  isCompleted ? "line-through text-slate-500" : ""
-                }`}
+                className={cn(
+                  "font-semibold text-slate-900 text-sm",
+                  isCompleted && "line-through text-slate-500",
+                  condensedView ? "mb-0 leading-tight" : "mb-1"
+                )}
               >
                 {task.name}
               </h3>
 
-              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <div
+                className={cn(
+                  "flex flex-wrap items-center gap-x-2 text-xs",
+                  condensedView ? "mt-0.5" : ""
+                )}
+              >
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -187,6 +213,17 @@ export default function TaskItem({
                   </Badge>
                 )}
 
+                {/* Display created_date field */}
+                {task.created_date && (
+                  <Badge
+                    variant="outline"
+                    className="flex items-center gap-1 text-xs px-1.5 py-0"
+                  >
+                    <Clock className="w-3 h-3" />
+                    {format(new Date(task.created_date), "MMM d, yyyy")}
+                  </Badge>
+                )}
+
                 {task.tags && task.tags.length > 0 && (
                   <div className="flex items-center gap-1">
                     <TagIcon className="w-3 h-3 text-slate-400" />
@@ -206,14 +243,32 @@ export default function TaskItem({
                     )}
                   </div>
                 )}
+
+                {/* Progress bar and text - show here when condensed */}
+                {condensedView && progress !== null && (
+                  <div className="flex items-center gap-1">
+                    <Progress value={progress} className="h-1.5 w-12" />{" "}
+                    {/* Smaller progress bar */}
+                    <span
+                      className={`text-xs ${
+                        isCompleted || task.status === "archived"
+                          ? "text-green-600 font-medium"
+                          : "text-slate-500"
+                      }`}
+                    >
+                      {progress}%
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {(progress !== null || isCompleted) && (
+              {/* Progress bar and text - show here when NOT condensed */}
+              {!condensedView && progress !== null && (
                 <div className="mt-2">
                   <Progress value={progress} className="h-1.5" />
                   <span
                     className={`text-xs ${
-                      isCompleted
+                      isCompleted || task.status === "archived"
                         ? "text-green-600 font-medium"
                         : "text-slate-500"
                     }`}
@@ -276,7 +331,8 @@ export default function TaskItem({
             </div>
           </div>
 
-          {task.description && (
+          {/* Task description - hide if condensed, or show truncated if short */}
+          {!condensedView && task.description && (
             <p
               className={`text-xs text-slate-600 mt-1 line-clamp-2 ${
                 isCompleted ? "text-slate-400" : ""

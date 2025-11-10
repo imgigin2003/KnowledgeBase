@@ -1,5 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -7,7 +5,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Filter, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { cn } from "@/lib/utils";
+import { CalendarIcon, X } from "lucide-react";
+import { format } from "date-fns";
 
 const PRIORITIES = ["all", "low", "medium", "high"];
 const STATUSES = [
@@ -33,6 +41,7 @@ const COLORS = [
 ];
 
 const COLOR_CLASSES = {
+  all: "bg-slate-100 text-slate-700",
   red: "bg-red-500",
   orange: "bg-orange-500",
   yellow: "bg-yellow-500",
@@ -52,44 +61,28 @@ export default function TaskFilters({
     filters.priority !== "all" ||
     filters.status !== "all" ||
     filters.color !== "all" ||
-    filters.tags.length > 0;
+    filters.tags.length > 0 ||
+    filters.dateRange?.startDate ||
+    filters.dateRange?.endDate;
 
-  const clearFilters = () => {
+  const handleClearFilters = () => {
     onFiltersChange({
       priority: "all",
       status: "all",
       color: "all",
       tags: [],
+      dateRange: { startDate: null, endDate: null },
     });
   };
 
-  const toggleTag = (tag) => {
-    const newTags = filters.tags.includes(tag)
-      ? filters.tags.filter((t) => t !== tag)
-      : [...filters.tags, tag];
-    onFiltersChange({ ...filters, tags: newTags });
-  };
-
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Filter className="w-4 h-4 text-slate-500" />
-        <span className="text-sm font-medium text-slate-700">Filters</span>
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={clearFilters}
-            className="ml-auto text-xs"
-          >
-            <X className="w-3 h-3 mr-1" />
-            Clear All
-          </Button>
-        )}
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="flex flex-col gap-4 p-4 rounded-lg border bg-white">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Priority Filter */}
         <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Priority
+          </label>
           <Select
             value={filters.priority}
             onValueChange={(value) =>
@@ -97,21 +90,23 @@ export default function TaskFilters({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Priority" />
+              <SelectValue placeholder="Filter by priority" />
             </SelectTrigger>
             <SelectContent>
               {PRIORITIES.map((priority) => (
                 <SelectItem key={priority} value={priority}>
-                  {priority === "all"
-                    ? "All Priorities"
-                    : priority.charAt(0).toUpperCase() + priority.slice(1)}
+                  {priority.charAt(0).toUpperCase() + priority.slice(1)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
+        {/* Status Filter */}
         <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Status
+          </label>
           <Select
             value={filters.status}
             onValueChange={(value) =>
@@ -119,26 +114,26 @@ export default function TaskFilters({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Status" />
+              <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
             <SelectContent>
               {STATUSES.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {status === "all"
-                    ? "All Statuses"
-                    : status
-                        .split("_")
-                        .map(
-                          (word) => word.charAt(0).toUpperCase() + word.slice(1)
-                        )
-                        .join(" ")}
+                  {status
+                    .split("_")
+                    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(" ")}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
+        {/* Color Filter */}
         <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Color
+          </label>
           <Select
             value={filters.color}
             onValueChange={(value) =>
@@ -146,16 +141,20 @@ export default function TaskFilters({
             }
           >
             <SelectTrigger>
-              <SelectValue placeholder="Color" />
+              <SelectValue placeholder="Filter by color" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All Colors</SelectItem>
-              {COLORS.filter((c) => c !== "all").map((color) => (
+              {COLORS.map((color) => (
                 <SelectItem key={color} value={color}>
                   <div className="flex items-center gap-2">
-                    <div
-                      className={`w-4 h-4 rounded-full ${COLOR_CLASSES[color]}`}
-                    ></div>
+                    {color !== "all" && (
+                      <div
+                        className={cn(
+                          "w-4 h-4 rounded-full",
+                          COLOR_CLASSES[color]
+                        )}
+                      ></div>
+                    )}
                     {color.charAt(0).toUpperCase() + color.slice(1)}
                   </div>
                 </SelectItem>
@@ -163,25 +162,88 @@ export default function TaskFilters({
             </SelectContent>
           </Select>
         </div>
+
+        {/* Date Range Filter (Created At) */}
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Created Date
+          </label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant={"outline"}
+                className={cn(
+                  "w-full justify-start text-left font-normal",
+                  !filters.dateRange?.startDate && "text-muted-foreground"
+                )}
+              >
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                {filters.dateRange?.startDate ? (
+                  filters.dateRange.endDate ? (
+                    <>
+                      {format(filters.dateRange.startDate, "LLL dd, y")} -{" "}
+                      {format(filters.dateRange.endDate, "LLL dd, y")}
+                    </>
+                  ) : (
+                    format(filters.dateRange.startDate, "LLL dd, y")
+                  )
+                ) : (
+                  <span>Pick a date range</span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={filters.dateRange}
+                onSelect={(range) =>
+                  onFiltersChange({ ...filters, dateRange: range })
+                }
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
 
-      {availableTags.length > 0 && (
-        <div>
-          <p className="text-xs font-medium text-slate-500 mb-2">
-            Filter by tags:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {availableTags.map((tag, index) => (
-              <Badge
-                key={index}
-                variant={filters.tags.includes(tag) ? "default" : "outline"}
-                className="cursor-pointer hover:bg-slate-200"
-                onClick={() => toggleTag(tag)}
-              >
-                {tag}
-              </Badge>
-            ))}
-          </div>
+      {/* Tags Filter */}
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          Tags
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {availableTags.map((tag) => (
+            <Badge
+              key={tag}
+              variant={filters.tags.includes(tag) ? "default" : "secondary"}
+              className={cn(
+                "cursor-pointer hover:opacity-80 transition-opacity",
+                filters.tags.includes(tag)
+                  ? "bg-blue-600 text-white"
+                  : "bg-slate-100 text-slate-700"
+              )}
+              onClick={() => {
+                const newTags = filters.tags.includes(tag)
+                  ? filters.tags.filter((t) => t !== tag)
+                  : [...filters.tags, tag];
+                onFiltersChange({ ...filters, tags: newTags });
+              }}
+            >
+              {tag}
+              {filters.tags.includes(tag) && <X className="ml-1 h-3 w-3" />}
+            </Badge>
+          ))}
+        </div>
+        {availableTags.length === 0 && (
+          <p className="text-sm text-slate-500">No tags available.</p>
+        )}
+      </div>
+
+      {hasActiveFilters && (
+        <div className="flex justify-end">
+          <Button variant="ghost" onClick={handleClearFilters}>
+            Clear All Filters
+          </Button>
         </div>
       )}
     </div>

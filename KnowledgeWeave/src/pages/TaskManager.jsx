@@ -288,7 +288,7 @@ export default function TaskManager() {
               </DropdownMenuContent>
             </DropdownMenu>
             <input
-              ref__={fileInputRef}
+              ref={fileInputRef}
               type="file"
               accept=".json, application/json"
               onChange={handleFileUpload}

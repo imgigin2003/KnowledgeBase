@@ -113,44 +113,46 @@ async function initDB() {
 /* -------------------------------------------------------------------------- */
 app.post("/api/task-files/upload", upload.single("file"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    if (!req.file) {
+      return res.status(400).json({ error: "No file uploaded" });
+    }
 
-    const tempPath = req.file.path;
-    const originalName = req.file.originalname;
+    const uploadedFilePath = req.file.path;
+    const fileContent = fs.readFileSync(uploadedFilePath, "utf-8");
 
     // Validate JSON
     let jsonData;
     try {
-      jsonData = JSON.parse(fs.readFileSync(tempPath, "utf-8"));
-    } catch {
-      fs.unlinkSync(tempPath);
+      jsonData = JSON.parse(fileContent);
+    } catch (e) {
+      fs.unlinkSync(uploadedFilePath);
       return res.status(400).json({ error: "Invalid JSON file" });
     }
 
+    // Validate structure
     if (!jsonData.tasks || !Array.isArray(jsonData.tasks)) {
-      fs.unlinkSync(tempPath);
-      return res.status(400).json({ error: "Expected { tasks: [] }" });
+      fs.unlinkSync(uploadedFilePath);
+      return res
+        .status(400)
+        .json({ error: "Invalid task file structure. Expected { tasks: [] }" });
     }
 
-    // Final filename (handle duplicates)
-    let finalName = originalName;
-    let finalPath = path.join(taskDataDir, finalName);
-    if (fs.existsSync(finalPath)) {
-      const parsed = path.parse(originalName);
-      finalName = `${parsed.name}-${Date.now()}${parsed.ext}`;
-      finalPath = path.join(taskDataDir, finalName);
-    }
+    // Generate unique filename
+    const timestamp = Date.now();
+    const originalName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, "_");
+    const newFilename = `tasks-${timestamp}-${originalName}`;
+    const newFilePath = path.join(taskDataDir, newFilename);
 
-    // Move/rename to final location
-    if (tempPath !== finalPath) {
-      fs.renameSync(tempPath, finalPath);
-    }
+    // Move file to task_data directory
+    fs.renameSync(uploadedFilePath, newFilePath);
 
-    res.json({ filename: finalName, success: true });
-  } catch (err) {
-    console.error("Upload error:", err);
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    res.status(500).json({ error: err.message || "Upload failed" });
+    res.json({ filename: newFilename, success: true });
+  } catch (error) {
+    console.error("Error uploading task file:", error);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ error: "Failed to upload task file" });
   }
 });
 
@@ -170,21 +172,28 @@ app.get("/api/task-files", (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                                   TASK CRUD                                */
 /* -------------------------------------------------------------------------- */
+
 app.get("/api/tasks", async (req, res) => {
   const filename = req.query.file || "reminders.json";
-  const db = getTaskDb(filename);
+  const taskDb = getTaskDb(filename);
+
   try {
-    await db.read();
-    let tasks = db.data?.tasks || [];
-    const sort = req.query._sort;
+    await taskDb.read();
+    let tasks = taskDb.data?.tasks || [];
+    const sortBy = req.query._sort;
     const order = req.query._order === "desc" ? -1 : 1;
-    if (sort) {
-      tasks.sort((a, b) =>
-        a[sort] < b[sort] ? -order : a[sort] > b[sort] ? order : 0
-      );
+
+    if (sortBy) {
+      tasks.sort((a, b) => {
+        if (a[sortBy] < b[sortBy]) return -1 * order;
+        if (a[sortBy] > b[sortBy]) return 1 * order;
+        return 0;
+      });
     }
+
     res.json(tasks);
-  } catch {
+  } catch (error) {
+    console.error("Error reading tasks:", error);
     res.status(500).json({ error: "Failed to read tasks" });
   }
 });
@@ -194,18 +203,27 @@ app.post("/api/tasks", async (req, res) => {
   const db = getTaskDb(filename);
   try {
     await db.read();
+    const now = new Date().toISOString();
     const task = {
       id: Date.now().toString(),
       ...req.body,
-      created_date: new Date().toISOString(),
-      updated_date: new Date().toISOString(),
+      created_date: now,
+      updated_date: now,
+      status_dates: {
+        // NEW: Initialize status_dates
+        [req.body.status || "created"]: now,
+      },
     };
     db.data.tasks = db.data.tasks || [];
     db.data.tasks.push(task);
     await db.write();
     res.json(task);
-  } catch {
-    res.status(500).json({ error: "Failed to create task" });
+  } catch (error) {
+    // Catch specific error to respond with it
+    console.error("Error creating task:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to create task", details: error.message });
   }
 });
 
@@ -216,15 +234,30 @@ app.put("/api/tasks/:id", async (req, res) => {
     await db.read();
     const idx = db.data.tasks.findIndex((t) => t.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: "Task not found" });
+
+    const oldTask = db.data.tasks[idx];
+    const now = new Date().toISOString();
+
+    // NEW: Update status_dates if status has changed
+    const newStatusDates = { ...oldTask.status_dates };
+    if (req.body.status && req.body.status !== oldTask.status) {
+      newStatusDates[req.body.status] = now;
+    }
+
     db.data.tasks[idx] = {
-      ...db.data.tasks[idx],
+      ...oldTask, // Keep existing fields not explicitly updated
       ...req.body,
-      updated_date: new Date().toISOString(),
+      updated_date: now,
+      status_dates: newStatusDates, // Ensure status_dates is always present and updated
     };
     await db.write();
     res.json(db.data.tasks[idx]);
-  } catch {
-    res.status(500).json({ error: "Failed to update task" });
+  } catch (error) {
+    // Catch specific error
+    console.error("Error updating task:", error);
+    res
+      .status(500)
+      .json({ error: "Failed to update task", details: error.message });
   }
 });
 

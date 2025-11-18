@@ -3,8 +3,8 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
-    "./src/components/**/*.{js,ts,jsx,tsx}", // اضافه برای ui components
-    "./src/pages/**/*.{js,ts,jsx,tsx}", // اضافه برای pages
+    "./src/components/**/*.{js,ts,jsx,tsx}",
+    "./src/pages/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: "class",
   theme: {
@@ -16,12 +16,12 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(221.2 83.2% 53.3%)", // blue-violet روشن‌تر (از #3b82f6 به #2563eb-like)
-          foreground: "hsl(210 40% 98%)", // white-ish برای متن روی primary
+          DEFAULT: "hsl(221.2 83.2% 53.3%)",
+          foreground: "hsl(210 40% 98%)",
         },
         secondary: {
-          DEFAULT: "hsl(210 40% 96%)", // light gray
-          foreground: "hsl(222.2 84% 4.9%)", // dark text
+          DEFAULT: "hsl(210 40% 96%)",
+          foreground: "hsl(222.2 84% 4.9%)",
         },
         destructive: {
           DEFAULT: "hsl(0 84.2% 60.2%)",

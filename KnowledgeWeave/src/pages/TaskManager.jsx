@@ -163,11 +163,9 @@ export default function TaskManager() {
 
   // Filter tasks - MODIFIED to include date filtering and archived status logic
   const filterTasks = (allTasks) => {
-    return allTasks.filter((task) => {
-      // 3. Archive status behavior: Hide archived tasks by default unless explicitly filtered
-      if (task.status === "archived" && filters.status !== "archived") {
+    const matchesFilter = (task) => {
+      if (task.status === "archived" && filters.status !== "archived")
         return false;
-      }
 
       const matchesSearch =
         !searchTerm ||
@@ -176,23 +174,26 @@ export default function TaskManager() {
 
       const matchesPriority =
         filters.priority === "all" || task.priority === filters.priority;
+
       const matchesStatus =
         filters.status === "all" || task.status === filters.status;
+
       const matchesColor =
         filters.color === "all" || task.color === filters.color;
+
       const matchesTags =
         filters.tags.length === 0 ||
         filters.tags.some((tag) => task.tags?.includes(tag));
 
-      // 1. Search by date filter - use 'from' and 'to'
-      const taskCreatedDate = task.created_date
+      const createdDate = task.created_date
         ? new Date(task.created_date)
         : null;
       const matchesStartDate = filters.dateRange?.from
-        ? taskCreatedDate && taskCreatedDate >= filters.dateRange.from
+        ? createdDate && createdDate >= filters.dateRange.from
         : true;
+
       const matchesEndDate = filters.dateRange?.to
-        ? taskCreatedDate && taskCreatedDate <= filters.dateRange.to
+        ? createdDate && createdDate <= filters.dateRange.to
         : true;
 
       return (
@@ -204,7 +205,15 @@ export default function TaskManager() {
         matchesStartDate &&
         matchesEndDate
       );
-    });
+    };
+    const shouldInclude = (task) => {
+      if (matchesFilter(task)) return true;
+
+      const children = allTasks.filter((t) => t.parent_id === task.id);
+      return children.some((child) => shouldInclude(child));
+    };
+
+    return allTasks.filter((task) => shouldInclude(task));
   };
 
   const filteredTasks = filterTasks(tasks);

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import TaskItem from "./TaskItem";
 
 export default function TaskTree({
@@ -7,9 +7,10 @@ export default function TaskTree({
   onEdit,
   onDelete,
   onStatusChange,
+  onDuplicate,
   onAddSubtask,
   level = 0,
-  condensedView, // New: condensedView prop
+  condensedView,
 }) {
   const [expandedTasks, setExpandedTasks] = useState(
     new Set(tasks.map((t) => t.id))
@@ -44,10 +45,11 @@ export default function TaskTree({
               onDelete={onDelete}
               onStatusChange={onStatusChange}
               onAddSubtask={onAddSubtask}
+              onDuplicate={onDuplicate}
               level={level}
               isExpanded={isExpanded}
               onToggleExpand={toggleExpand}
-              condensedView={condensedView} // Pass condensedView
+              condensedView={condensedView}
             />
             {hasChildren && isExpanded && (
               <TaskTree
@@ -57,6 +59,7 @@ export default function TaskTree({
                 onDelete={onDelete}
                 onStatusChange={onStatusChange}
                 onAddSubtask={onAddSubtask}
+                onDuplicate={onDuplicate}
                 level={level + 1}
                 condensedView={condensedView}
               />

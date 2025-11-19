@@ -28,6 +28,9 @@ const STATUSES = [
   "done",
   "completed",
   "archived",
+  "failed",
+  "canceled",
+  "obsolete",
 ];
 const COLORS = [
   "red",

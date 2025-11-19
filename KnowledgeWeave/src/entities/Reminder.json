@@ -30,7 +30,10 @@
         "paused",
         "done",
         "completed",
-        "archived"
+        "archived",
+        "failed",
+        "canceled",
+        "obsolete"
       ],
       "default": "created",
       "description": "Task status"

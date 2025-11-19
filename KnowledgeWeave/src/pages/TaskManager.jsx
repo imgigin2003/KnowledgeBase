@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Task } from "@/entities/Task";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,8 +10,8 @@ import {
   FileText,
   Upload,
   ChevronDown,
-  Rows3, // Icon for condensed view
-  List, // Icon for normal view
+  Rows3,
+  List,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
@@ -126,6 +126,47 @@ export default function TaskManager() {
       deadline: "",
     });
     setShowEditor(true);
+  };
+
+  const handleDuplicateTask = async (taskToDuplicate) => {
+    // Recursive helper function to duplicate a task and its children
+    const duplicateRecursive = async (originalTask, newParentId = null) => {
+      const newTaskData = {
+        ...originalTask,
+        id: undefined, // Let backend generate new ID
+        created_date: undefined, // New creation date for the duplicate
+        updated_date: undefined, // New update date for the duplicate
+        status_dates: {
+          // Initialize status_dates for the new task based on its initial status
+          [originalTask.status || "created"]: new Date().toISOString(),
+        },
+        parent_id: newParentId,
+      };
+
+      try {
+        // Use Task.create directly to avoid interfering with createTaskMutation's onSuccess
+        const createdTask = await Task.create(newTaskData, selectedFile);
+
+        // Find direct children of the originalTask from the global 'tasks' array
+        const directChildren = tasks.filter(
+          (t) => t.parent_id === originalTask.id
+        );
+
+        // Recursively duplicate each child, passing the newly created parent's ID
+        for (const child of directChildren) {
+          await duplicateRecursive(child, createdTask.id);
+        }
+      } catch (error) {
+        console.error(`Error duplicating task "${originalTask.name}":`, error);
+        // Log errors but continue if possible to duplicate other tasks
+      }
+    };
+
+    // Start the recursive duplication process from the top-level task
+    await duplicateRecursive(taskToDuplicate, taskToDuplicate.parent_id);
+
+    // After all duplications are done, invalidate queries to refresh the UI
+    queryClient.invalidateQueries({ queryKey: ["tasks", selectedFile] });
   };
 
   const handleFileUpload = async (event) => {
@@ -370,6 +411,7 @@ export default function TaskManager() {
                 onDelete={handleDeleteTask}
                 onStatusChange={handleStatusChange}
                 onAddSubtask={handleAddSubtask}
+                onDuplicate={handleDuplicateTask}
                 condensedView={condensedView}
               />
             </CardContent>

@@ -40,7 +40,7 @@ export default function TaskManager() {
   });
   const [selectedFile, setSelectedFile] = useState("reminders.json");
   const [taskFiles, setTaskFiles] = useState(["reminders.json"]);
-  const [condensedView, setCondensedView] = useState(false); // New: condensed view toggle
+  const [condensedView, setCondensedView] = useState(true);
   const fileInputRef = useRef(null);
 
   const queryClient = useQueryClient();
@@ -294,7 +294,7 @@ export default function TaskManager() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {/* 4. Toggle for condensed layout */}
+            {/* Toggle for condensed layout */}
             <Toggle
               pressed={condensedView}
               onPressedChange={setCondensedView}

@@ -474,9 +474,10 @@ app.delete("/api/categories/:id", async (req, res) => {
 /*                               SERVE FRONTEND                               */
 /* -------------------------------------------------------------------------- */
 app.use(express.static(path.join(__dirname, "../dist")));
-app.get("/*", (req, res) =>
-  res.sendFile(path.join(__dirname, "../dist/index.html"))
-);
+app.use((req, res) => {
+  res.sendFile(path.join(__dirname, "../dist/index.html"));
+});
+
 
 /* -------------------------------------------------------------------------- */
 /*                                   STARTUP                                  */

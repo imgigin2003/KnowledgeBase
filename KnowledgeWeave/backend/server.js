@@ -93,7 +93,7 @@ async function initDB() {
             }
             level = level.get(part).subcategories;
           });
-        }
+        },
       );
     });
 
@@ -118,7 +118,7 @@ app.post("/api/task-files/upload", upload.single("file"), async (req, res) => {
     }
 
     const uploadedFilePath = req.file.path;
-    const fileContent = fs.readFileSync(uploadedFilePath, "utf-8");
+    const fileContent = await fs.readFileSync(uploadedFilePath, "utf-8");
 
     // Validate JSON
     let jsonData;
@@ -159,9 +159,9 @@ app.post("/api/task-files/upload", upload.single("file"), async (req, res) => {
 /* -------------------------------------------------------------------------- */
 /*                               LIST TASK FILES                              */
 /* -------------------------------------------------------------------------- */
-app.get("/api/task-files", (req, res) => {
+app.get("/api/task-files", async (req, res) => {
   try {
-    const files = fs.readdirSync(taskDataDir);
+    const files = await fs.readdirSync(taskDataDir);
     const jsonFiles = files.filter((f) => f.endsWith(".json"));
     res.json(jsonFiles);
   } catch {
@@ -175,7 +175,7 @@ app.get("/api/task-files", (req, res) => {
 
 app.get("/api/tasks", async (req, res) => {
   const filename = req.query.file || "reminders.json";
-  const taskDb = getTaskDb(filename);
+  const taskDb = await getTaskDb(filename);
 
   try {
     await taskDb.read();
@@ -200,7 +200,7 @@ app.get("/api/tasks", async (req, res) => {
 
 app.post("/api/tasks", async (req, res) => {
   const filename = req.query.file || "reminders.json";
-  const db = getTaskDb(filename);
+  const db = await getTaskDb(filename);
   try {
     await db.read();
     const now = new Date().toISOString();
@@ -229,7 +229,7 @@ app.post("/api/tasks", async (req, res) => {
 
 app.put("/api/tasks/:id", async (req, res) => {
   const filename = req.query.file || "reminders.json";
-  const db = getTaskDb(filename);
+  const db = await getTaskDb(filename);
   try {
     await db.read();
     const idx = db.data.tasks.findIndex((t) => t.id === req.params.id);
@@ -263,7 +263,7 @@ app.put("/api/tasks/:id", async (req, res) => {
 
 app.delete("/api/tasks/:id", async (req, res) => {
   const filename = req.query.file || "reminders.json";
-  const db = getTaskDb(filename);
+  const db = await getTaskDb(filename);
   try {
     await db.read();
     const toDelete = new Set([req.params.id]);
@@ -285,7 +285,7 @@ app.delete("/api/tasks/:id", async (req, res) => {
 
 app.get("/api/tasks/:id", async (req, res) => {
   const filename = req.query.file || "reminders.json";
-  const db = getTaskDb(filename);
+  const db = await getTaskDb(filename);
   try {
     await db.read();
     const task = db.data.tasks.find((t) => t.id === req.params.id);
@@ -329,7 +329,7 @@ app.put("/api/articles/:id", async (req, res) => {
 app.delete("/api/articles/:id", async (req, res) => {
   await articlesDb.read();
   articlesDb.data.articles = articlesDb.data.articles.filter(
-    (a) => a.id !== req.params.id
+    (a) => a.id !== req.params.id,
   );
   await articlesDb.write();
   res.json({ success: true });
@@ -357,11 +357,11 @@ app.post("/api/articles/:id/comments", async (req, res) => {
 app.put("/api/articles/:aid/comments/:cid", async (req, res) => {
   await articlesDb.read();
   const aIdx = articlesDb.data.articles.findIndex(
-    (a) => a.id === req.params.aid
+    (a) => a.id === req.params.aid,
   );
   if (aIdx === -1) return res.status(404).json({ error: "Article not found" });
   const cIdx = articlesDb.data.articles[aIdx].comments?.findIndex(
-    (c) => c.id === req.params.cid
+    (c) => c.id === req.params.cid,
   );
   if (cIdx === -1) return res.status(404).json({ error: "Comment not found" });
   articlesDb.data.articles[aIdx].comments[cIdx] = {
@@ -375,13 +375,13 @@ app.put("/api/articles/:aid/comments/:cid", async (req, res) => {
 app.delete("/api/articles/:aid/comments/:cid", async (req, res) => {
   await articlesDb.read();
   const aIdx = articlesDb.data.articles.findIndex(
-    (a) => a.id === req.params.aid
+    (a) => a.id === req.params.aid,
   );
   if (aIdx === -1) return res.status(404).json({ error: "Article not found" });
   const initial = articlesDb.data.articles[aIdx].comments?.length || 0;
   articlesDb.data.articles[aIdx].comments =
     articlesDb.data.articles[aIdx].comments?.filter(
-      (c) => c.id !== req.params.cid
+      (c) => c.id !== req.params.cid,
     ) || [];
   if (articlesDb.data.articles[aIdx].comments.length === initial)
     return res.status(404).json({ error: "Comment not found" });
@@ -415,7 +415,7 @@ app.put("/api/interns/:id", async (req, res) => {
 app.delete("/api/interns/:id", async (req, res) => {
   await internsDb.read();
   internsDb.data.interns = internsDb.data.interns.filter(
-    (i) => i.id !== req.params.id
+    (i) => i.id !== req.params.id,
   );
   await internsDb.write();
   res.json({ success: true });
@@ -464,7 +464,7 @@ app.put("/api/categories/:id", async (req, res) => {
 app.delete("/api/categories/:id", async (req, res) => {
   await categoriesDb.read();
   categoriesDb.data.categories = categoriesDb.data.categories.filter(
-    (c) => c.id !== req.params.id
+    (c) => c.id !== req.params.id,
   );
   await categoriesDb.write();
   res.json({ success: true });
@@ -477,7 +477,6 @@ app.use(express.static(path.join(__dirname, "../dist")));
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, "../dist/index.html"));
 });
-
 
 /* -------------------------------------------------------------------------- */
 /*                                   STARTUP                                  */

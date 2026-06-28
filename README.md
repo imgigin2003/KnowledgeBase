@@ -1,175 +1,209 @@
-# 🚀 Knowledge Weave - Complete Installation and Setup Guide
+# 📚 KnowledgeWeave
 
-- Welcome! 👋 to Knowledge Weave, a self-hosted knowledge management system built with React (frontend) and Node.js (backend). This project is fully independent of Supabase—data (articles and interns) is stored locally in JSON files for easy persistence. This README covers everything from zero to hero (0 to 100): prerequisites, installation, version checks, running the app, and troubleshooting. If you hit issues, check GitHub issues or drop a comment. Let's get started! 😊
+> **Organize your knowledge. Track your team. Manage your tasks.** All in one place.
 
-## 📋 Prerequisites
+KnowledgeWeave is a lightweight, full-stack web app for managing articles, tracking interns, and organizing tasks—designed to grow with your team without the bloat.
 
-- Before diving in, ensure you have these basics. All are free and straightforward!
+---
 
-1. Node.js ⚡: Version 20.x or higher (LTS recommended). Check with:
+## ✨ Features
 
-- `node -v`
-  = If lower, download from nodejs.org.
-- npm (comes with Node): Version 10.x+.
-- `npm -v`
+### 📖 Knowledge Base
 
-2. Git 🐙: For cloning the repo. Check with:
+- **Rich Articles** — Write and organize articles with categories, tags, and summaries
+- **Nested Categories** — Organize knowledge hierarchically
+- **Comments & Discussion** — Annotate articles with inline comments
+- **Quick Search** — Find what you need fast
 
-- `git --version`
-- If missing, install from git-scm.com.
+### 👥 Intern Tracking
 
-3. Docker 🐳 (optional, for self-hosting): Version 20+. Check with:
+- **Profiles** — Track intern name, email, program, mentor, and status
+- **Requirements** — Attach and track learning goals
+- **Notes & History** — Keep detailed records of progress
 
-- `docker --version`
-- make sure you have the "Docker" desktop app runnin
+### ✅ Task Management
 
-4. VS Code (recommended) 📝: For editing, with extensions like "Tailwind CSS IntelliSense" and "ES7+ React Snippets".
+- **Flexible Tasks** — Create tasks with custom fields and priorities
+- **Hierarchical Structure** — Parent/child task relationships
+- **File Uploads** — Upload and organize JSON task files
+- **Status Tracking** — Track status changes with timestamps
+- **Multiple Task Lists** — Manage different projects independently
 
-- Pro Tip: Works on Windows/macOS/Linux. For macOS M1/M2, install ARM64 Node.
+### 🎨 Beautiful UI
 
-### 🛣️ Step 1: Clone and Prepare the Project
+- **Responsive Design** — Works on desktop, tablet, and mobile
+- **Dark Mode Ready** — Tailwind CSS with custom theme
+- **Real-time Updates** — React + TanStack Query for snappy interactions
 
-- Grab the repo and navigate to it.
-- git clone https://github.com/imgigin2003/knowledgeBase.git
-- cd KnowledgeWeave
-- Verify: Run `tree -I node_modules` (or `dir /s on Windows`)—you should see this structure:
+---
+
+## 🛠️ Tech Stack
+
+| Layer       | Technology                           |
+| ----------- | ------------------------------------ |
+| Frontend    | React 19, Vite, Tailwind CSS v3      |
+| UI          | shadcn/ui, Radix UI, React Hook Form |
+| Backend     | Node.js, Express                     |
+| Database    | lowdb (JSON files)                   |
+| Forms       | React Hook Form                      |
+| HTTP Client | Browser Fetch API                    |
+
+---
+
+## 📁 Project Structure
 
 ```
-├── Dockerfile
-├── README.md
-├── backend
-│   ├── articles.json
-│   ├── interns.json
-│   ├── package.json
-│   └── server.js
-├── src
-│   ├── App.jsx
-│   ├── pages
-│   │   ├── Dashboard.jsx
-│   │   └── InternTracking.jsx
-│   └── entities
-│       ├── Article.js
-│       └── Intern.js
-├── vite.config.js
-└── package.json
+KnowledgeWeave/
+├── frontend/              # React SPA (Vite + Tailwind)
+│   ├── src/
+│   │   ├── components/    # Reusable UI components
+│   │   ├── pages/         # Route-level pages
+│   │   ├── entities/      # API client functions
+│   │   ├── hooks/         # Custom React hooks
+│   │   └── utils/         # Helpers
+│   └── ...config files
+├── backend/               # Express API + lowdb
+│   ├── src/
+│   │   ├── controllers/   # Request handlers (articles, tasks, interns)
+│   │   ├── routes/        # API route definitions
+│   │   ├── db/            # lowdb setup & initialization
+│   │   ├── middleware/    # File upload & CORS
+│   │   ├── app.js         # Express app setup
+│   │   └── server.js      # Entry point
+│   ├── data/              # JSON databases (gitignored at runtime)
+│   └── __test__/          # Jest + supertest tests
+├── Dockerfile             # Multi-stage: builds frontend, runs backend
+└── docker-compose.yml     # One-command dev/prod stack
 ```
 
-### 🔧 Step 2: Install Dependencies
+---
 
-- Install frontend and backend packages separately.
+## ⚡ Quick Start
 
-* Frontend (root directory):
+### Development (two terminals)
 
-- `npm install`
-- (Installs React, Vite, Tailwind, shadcn/ui, etc.)
+**Terminal 1 — Backend** (http://localhost:3001):
 
-* Backend:
+```bash
+cd backend
+npm install
+npm run dev          # Auto-restarts on file changes
+```
 
-- `cd backend`
-- `npm install`
-- (Installs Express, lowdb v7, CORS.)
-- Return to root: `cd ..`
+**Terminal 2 — Frontend** (http://localhost:5173):
 
-- Version Check:
-  `npm list react vite express lowdb`
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-- Expected: React ~18.x, Vite ~5.x, Express ~5.x, lowdb ~7.x.
-- If errors (e.g., peer deps), run `npm install --legacy-peer-deps`
+The frontend dev server proxies `/api/*` to the backend, so everything just works.
 
-### 📁 Step 3: Initial Setup (JSON Files & Config)
+### Testing
 
-- Set up local data storage and verify configs.
+```bash
+cd backend
+npm test            # 20 Jest + supertest tests
+```
 
-- Create/Verify JSON Files (in backend/):
+### Production with Docker
 
-`articles.json:`
+```bash
+docker compose up --build
+```
 
-- json{ "articles": [] }
+App runs on http://localhost:3001 with the frontend built-in.
 
-`interns.json:`
+---
 
-- json{ "interns": [] }
+## 📊 Data & Persistence
 
-`categories.json`
+**Your data is safe and portable:**
 
-- json{ "categories": []}
+- **No data in git** — Articles, interns, and tasks are gitignored; your local data stays local
+- **Empty deployments** — Fresh installs start with no content (zero cold-start data)
+- **Persistent volumes** — In production, `backend/data/` mounts as a Docker volume
+- **JSON-based** — Easy to inspect, backup, or migrate (no DB server needed)
 
-- Import Existing Data (if you have backups): Copy arrays from your backup JSONs into the files (ensure IDs are strings).
+### Fresh Deploy Behavior
 
-- Check vite.config.js (root): Ensure proxy for API:
-  ```jsserver: {
-  proxy: {
-    "/api": {
-      target: "http://localhost:3001",
-      changeOrigin: true,
-    },
-  },
-  }
-  ```
+A fresh deployment starts completely empty:
 
-* Verify: Open JSONs in VS Code—no syntax errors. Configs saved?
+```bash
+curl https://your-app.com/api/articles
+# Response: []
+```
 
-### ▶️ Step 4: Run in Development Mode (Local Dev)
+As users add content, the app writes to `backend/data/` (or wherever `DATA_DIR` points). Back it up by saving that folder.
 
-- Run backend first (for API), then frontend.
+---
 
-Start Backend (in backend/):
-`npm start`
+## ⚙️ Configuration
 
-- Output: `"Server running on port 3001"` ✅. Keep this terminal open.
+The backend respects these environment variables (all optional):
 
-- Start Frontend (in root, new terminal):
-  `npm run dev`
+| Variable     | Default          | Purpose                                  |
+| ------------ | ---------------- | ---------------------------------------- |
+| `PORT`       | `3001`           | Port the API/server listens on           |
+| `DATA_DIR`   | `backend/data`   | Where the JSON databases live            |
+| `PUBLIC_DIR` | `backend/public` | Built frontend to serve (if it exists)   |
+| `NODE_ENV`   | `development`    | Set to `production` for optimized output |
 
-- Output: `"Local: http://localhost:5173/"` (or similar port).
+---
 
-- Open Browser: http://localhost:5173
+## 🗂️ API Routes
 
-### Test Suite: 🎯
+All routes live under `/api`:
 
-- Dashboard: Loads with "No articles yet" (if empty). Recent Articles section visible.
-- Intern Tracking: Click sidebar—interns load (empty list if new).
-- Create Article: + New Article → Fill form → Submit → Refresh (F5) → Article persists.
-- Add Intern: + Add Intern → Form → Submit → Refresh → Intern shows.
-- Console Check (F12 > Console/Network): No CORS/fetch errors. API calls (e.g., /api/articles) return 200 OK.
+```
+GET    /api/articles              # List articles
+POST   /api/articles              # Create article
+GET    /api/articles/:id          # Get article
+PUT    /api/articles/:id          # Update article
+DELETE /api/articles/:id          # Delete article
 
-* Pro Tip: Data saves to backend/\*.json—edit manually for testing!
+POST   /api/articles/:id/comments # Add comment
+PUT    /api/articles/:aid/comments/:cid
+DELETE /api/articles/:aid/comments/:cid
 
-### 🔨 Step 5: Build and Run in Production Mode (Optional)
+GET    /api/interns               # List interns
+POST   /api/interns               # Create intern
+PUT    /api/interns/:id           # Update intern
+DELETE /api/interns/:id           # Delete intern
 
-- For a production-like setup (no dev servers).
+GET    /api/tasks                 # List tasks
+POST   /api/tasks                 # Create task
+PUT    /api/tasks/:id             # Update task
+DELETE /api/tasks/:id             # Delete task (and children)
 
-- Build Frontend:
-  `npm run build`
-- (Creates dist/ folder.)
-- Run Backend with Build (serves static files):
-  `cd backend`
-  `npm start`
+GET    /api/task-files            # List uploaded task files
+POST   /api/task-files/upload     # Upload JSON task file
+```
 
-- Now accesses http://localhost:3001 for full app.
+Query params:
 
-* Test: Browser to http://localhost:3001—app loads, APIs work. Optimized and faster! 🚀
+- `?file=filename.json` — Select which task list to operate on (default: `reminders.json`)
+- `?_sort=field&_order=asc` — Sort results
 
-### 🐳 Step 6: Self-Host with Docker (Optional, for Servers)
+---
 
-- Easy deployment on any machine with Docker.
+## 🚀 Roadmap
 
-- Build & Run:
+- [x] Clean architecture (controllers, routes, DB layer)
+- [x] Comprehensive tests (20+ Jest tests)
+- [x] Multi-stage Docker build
+- [x] Data isolation (empty deployments)
+- [x] Inline editing in the UI
+- [ ] Export to PDF/JSON
+- [ ] Leaderboards (if adding user auth)
 
-  1. open ducker desktop app and let it run in the background
-  2. `docker compose up --build`
+---
 
-- Output: Builds frontend/backend, starts on port 3001.
+## 🤝 Contributing
 
-- Access: `http://localhost:3001`
-- Stop: `Ctrl+C`, then `docker compose down -v (cleans volumes).`
+Found a bug? Have an idea? Fork, explore, and submit a PR. All contributions welcome.
 
-Verify: Logs show `"Server running on port 3001"`. Data persists via mounted JSON volumes.
+---
 
-- if you encounter with `- err: exec: "docker-credential-desktop": executable file not found in $PATH` error, complete the following:
-
-1. Access `nano ~/.docker/config.json`
-2. Modify `credsStore` to `credStore`
-3. Save and Run Again
-
-## Have Fun!✨
+_Keep your knowledge organized. Build something great. 📚✨_

@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.vite
+**/coverage
+**/*.log
+**/.DS_Store
+.git
+.env
+
+# Never bake real data into the image — deployments start empty.
+backend/data/*.json
+backend/data/task-files/*.json
+backend/__test__/test-data

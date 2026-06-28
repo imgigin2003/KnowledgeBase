@@ -1,0 +1,14 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+    # Persist the JSON "databases" and uploaded task files across restarts.
+    volumes:
+      - ./backend/data:/app/backend/data
+    restart: unless-stopped

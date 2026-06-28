@@ -126,17 +126,6 @@ App runs on http://localhost:3001 with the frontend built-in.
 - **Persistent volumes** — In production, `backend/data/` mounts as a Docker volume
 - **JSON-based** — Easy to inspect, backup, or migrate (no DB server needed)
 
-### Fresh Deploy Behavior
-
-A fresh deployment starts completely empty:
-
-```bash
-curl https://your-app.com/api/articles
-# Response: []
-```
-
-As users add content, the app writes to `backend/data/` (or wherever `DATA_DIR` points). Back it up by saving that folder.
-
 ---
 
 ## ⚙️ Configuration

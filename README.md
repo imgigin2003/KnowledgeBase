@@ -177,18 +177,6 @@ Query params:
 
 ---
 
-## 🚀 Roadmap
-
-- [x] Clean architecture (controllers, routes, DB layer)
-- [x] Comprehensive tests (20+ Jest tests)
-- [x] Multi-stage Docker build
-- [x] Data isolation (empty deployments)
-- [x] Inline editing in the UI
-- [ ] Export to PDF/JSON
-- [ ] Leaderboards (if adding user auth)
-
----
-
 ## 🤝 Contributing
 
 Found a bug? Have an idea? Fork, explore, and submit a PR. All contributions welcome.
